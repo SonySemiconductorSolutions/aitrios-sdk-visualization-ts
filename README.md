@@ -44,8 +44,7 @@ See the ["**Cloud SDK Visualization Tutorial**"](./docs/development-docs/CloudSD
 - [Contact us](https://developer.aitrios.sony-semicon.com/en/contact-us-en)
 
 ## See also
-
-- ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en)
+- ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/)
 
 ## Trademark
 
