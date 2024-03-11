@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM node:16-alpine
+FROM node:18-alpine
 
 RUN apk upgrade --update-cache --available \
   && apk add fontconfig --no-cache \
@@ -25,11 +25,14 @@ WORKDIR /app
 COPY --chown=node:node package*.json ./
 COPY --chown=node:node ./src ./src
 COPY --chown=node:node ./LICENSE ./
+COPY --chown=node:node ./appLaunch.sh ./
 
 RUN npm ci --omit=dev
 RUN npm uninstall -g pnpm
 
 WORKDIR /app/src
+
+RUN npx next telemetry disable
 
 RUN ["../node_modules/.bin/next", "build"]
 
@@ -37,4 +40,4 @@ USER node
 
 EXPOSE 3000
 
-CMD ["../node_modules/.bin/next", "start"]
+CMD ["/bin/sh","/app/appLaunch.sh"]

@@ -14,57 +14,78 @@
  * limitations under the License.
  */
 
-import { Client, Config } from 'consoleaccesslibrary'
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../..'
-import { getConsoleSettings } from '../../../common/config'
 import { getDateDecrement, getDateIncrement } from '../../../hooks/util'
 import { deserialize } from '../../../hooks/deserialize/deserializeFunction'
-
+import { getInference } from '../../../hooks/getStorageData'
+import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
 /**
- * Uses Console to get uploading inference data, and deserialize
+ * Uses get inference data, and deserialize
  *
  * @param deviceId The id of the device to get uploading inference data.
+ * @param subDirectory The Subdirectory where the acquired inferred source images are stored.
  * @param timestamp The time of the inference data is retrieved.
  * @param aiTask The model of the used AI model type.
+ * @param mode The type of mode selected.
  *
  * @returns an object. Ex: [{"1":{...}, "2"{...}, ...,}]
  */
-const getInferenceResults = async (deviceId: string, timestamp: string, aiTask: string) => {
-  const consoleSettings = getConsoleSettings()
-  let calClient
-  try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint, consoleSettings.console_access_settings.portal_authorization_endpoint, consoleSettings.console_access_settings.client_id, consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
+const getInferenceResults = async (deviceId: string, subDirectory: string, timestamp: string, aiTask: string, mode: string) => {
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && mode === 'realtimeMode') {
+    deviceId = ''
+    subDirectory = ''
   }
-  const filter = `EXISTS(SELECT VALUE i FROM i IN c.Inferences WHERE i.T >= "${getDateDecrement(timestamp)}" AND i.T <= "${getDateIncrement(timestamp)}")`
-  const res = await calClient?.insight.getInferenceResults(deviceId, filter, 1, 1, undefined)
-  if (res.status !== 200) {
-    throw new Error(JSON.stringify(res.response.data))
-  }
-
-  const errorMsg = JSON.stringify({ message: 'Cannot get inferences.' })
+  const response = await getInference(deviceId, subDirectory, getDateDecrement(timestamp), getDateIncrement(timestamp))
+  const errorMsg = 'Cannot get inferences.'
   try {
-    if (res.data.length === 0 || !res.data[0].inference_result.Inferences[0].O) {
-      throw new Error(errorMsg)
+    if (response?.length === 0 || !response) {
+      throw new Error(JSON.stringify({ message: errorMsg }))
     }
   } catch (e) {
-    throw new Error(errorMsg)
+    throw new Error(JSON.stringify({ message: errorMsg }))
   }
 
   try {
-    const deserializedList = await deserialize(res.data[0].inference_result.Inferences[0].O, aiTask)
-    const deserializedRawData = res.data[0]
+    let deserializedList
+    if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+      deserializedList = await deserialize(response[0].inference_result.Inferences[0].O, aiTask)
+    } else {
+      deserializedList = await deserialize(response[0].Inferences[0].O, aiTask)
+    }
+    const deserializedRawData = response[0]
     if (deserializedList !== undefined) {
       if (aiTask === OBJECT_DETECTION || aiTask === CLASSIFICATION) {
-        deserializedRawData.inference_result.Inferences[0].O = deserializedList
+        if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+          deserializedRawData.inference_result.Inferences[0].O = deserializedList
+        } else {
+          deserializedRawData.Inferences[0].O = deserializedList
+        }
       } else if (aiTask === SEGMENTATION) {
-        const T = deserializedRawData.inference_result.Inferences[0].T
-        deserializedRawData.inference_result.Inferences[0] = { T, ...deserializedList }
+        if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+          const T = deserializedRawData.inference_result.Inferences[0].T
+          deserializedRawData.inference_result.Inferences[0] = { T, ...deserializedList }
+        } else {
+          const T = deserializedRawData.Inferences[0].T
+          deserializedRawData.Inferences[0] = { T, ...deserializedList }
+        }
       }
-      return deserializedRawData
+      const copyRawData = JSON.parse(JSON.stringify(deserializedRawData))
+      const inferences = {
+        deserializedRawData,
+        inferencesList: {
+          inference_result: {
+            Inferences: []
+          }
+        }
+      }
+      if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+        inferences.inferencesList = deserializedRawData
+      } else {
+        const Inferences = copyRawData.Inferences
+        inferences.inferencesList.inference_result.Inferences = Inferences
+      }
+      return inferences
     }
   } catch (e) {
     throw new Error(JSON.stringify({ message: 'The specified AITask and data AITask may not match.\rPlease check the specified AITask.' }))
@@ -77,7 +98,9 @@ const getInferenceResults = async (deviceId: string, timestamp: string, aiTask: 
  * @param req Request
  * deviceId: edge AI device ID
  * timestamp: used filter on data related to the image
+ * subDirectory: inference data's subdirectory name.
  * aiTask: Specify the AI model used  ex.'objectDetection'
+ * mode: use 'realtimeMode' or 'historyMode'
  *
  * @param res Response
  * inferencesList:get inference contents data (after deserialize)
@@ -89,20 +112,27 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
     return
   }
   const deviceId: string | undefined = req.query.deviceId?.toString()
+  const subDirectory: string | undefined = req.query.subDirectory?.toString()
   const timestamp: string | undefined = req.query.timestamp?.toString()
   const aiTask: string | undefined = req.query.aiTask?.toString()
+  const mode: string | undefined = req.query.mode?.toString()
 
-  if (deviceId === undefined || timestamp === undefined || aiTask === undefined) {
+  if (deviceId === undefined || subDirectory === undefined ||
+    timestamp === undefined || aiTask === undefined ||
+    mode === undefined) {
     throw new Error(JSON.stringify({ message: 'Some parameter is undefined.' }))
   } else {
     if (aiTask !== OBJECT_DETECTION && aiTask !== CLASSIFICATION && aiTask !== SEGMENTATION) {
-      res.status(400).json({ message: 'Only objectDetection or classification or segmentation.' })
+      res.status(400).json('Only objectDetection or classification or segmentation.')
       return
     }
-    await getInferenceResults(deviceId, timestamp, aiTask)
+    await getInferenceResults(deviceId, subDirectory, timestamp, aiTask, mode)
       .then((result) => {
-        const inferenceData = { inferencesList: result }
-        return res.status(200).json(inferenceData)
+        const response = {
+          deserializedRawData: result?.deserializedRawData,
+          inferencesList: result?.inferencesList
+        }
+        return res.status(200).json(response)
       }).catch(err => {
         return res.status(500).json(err.message)
       })

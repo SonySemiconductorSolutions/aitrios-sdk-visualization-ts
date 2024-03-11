@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -14,8 +18,17 @@
     "isolatedModules": true,
     "strictNullChecks": true,
     "jsx": "preserve",
-    "incremental": true
+    "incremental": true,
+    "experimentalDecorators": true,
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", "hooks/useInterval.js"],
-  "exclude": ["node_modules", "aitrios-sdk-console-access-lib-ts"]
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "hooks/useInterval.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "aitrios-sdk-console-access-lib-ts"
+  ]
 }

@@ -29,7 +29,7 @@
 Added support for Semantic Segmentation
 
 |2023/4/13
-|Added method to get client ID and secret +
+|Added method to get Client ID and Secret +
 Followed the renaming of the VS Code extension +
 Fixed parenthesis notation for tool names
 
@@ -48,11 +48,17 @@ Added that garbled characters occur in some environments
 
 |2023/7/5
 |Added how to customize "**Visualization**"
+
+|2023/07/25
+|Changed the Version of Node from16 to 18
+
+|2023/09/01
+|Supported Console Developer Edition and Console Enterprise Edition
 |===
 
 == Introduction
 This tutorial shows you how to use "**Visualization**". + 
-"**Visualization**" is provided to see inference results uploaded by the edge AI device to the "**Console**".
+"**Visualization**" is provided to check the inference results which the edge AI device uploaded to "**Console**", "Azure Blob Storage" and "Local Storage".
 
 [#_precondition]
 == Prerequisite
@@ -62,6 +68,7 @@ The acquired information is used in <<#_Execute_visualization,"Use "Visualizatio
 The required connection information is as follows:
 
 * Client application details
+- When using "**Console Developer Edition**"
 ** Refer to the client application list of "**Portal for AITRIOS**" or register the client application for the sample application if necessary to get the following information: 
 See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for more information.
 *** Client ID
@@ -70,6 +77,13 @@ See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semi
 ** Get the following information from https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication[this material]:
 *** Console endpoint
 *** Portal authorization endpoint
+
+- When using "**Console Enterprise Edition**"
+** Please contact "**Console**" deployment representative (Service Administrator).
+
+To use "Azure Blob Storage", the connection information to access "Azure Blob Storage" is required.
+For details, please refer to https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account[ "**Configure a connection string for an Azure storage account**" ]
+
 
 === Edge AI devices
 In order for the "**Visualization**" to work properly, the edge AI device must have specific settings. + 
@@ -80,10 +94,27 @@ Required settings are as follows:
 * From the "**Console**" UI, set command parameter file to the following setting:
 +
 
-** Mode=1(Image&Inference Result)
-** UploadMethodIR="Mqtt"
+** When using "**Console**" +
+When not described, the following values are set automatically. +
+UploadMethod="BlobStorage" +
+UploadMethodIR="Mqtt"
+** "Azure Blob Storage" +
+UploadMethod="BlobStorage" +
+UploadMethodIR="BlobStorage"
+** "Local Storage" +
+UploadMethod="HTTPStorage" +
+UploadMethodIR="HTTPStorage" 
++
 ** Other parameters need to be changed depending on the AI model and application content.
 
+=== External transfer settings
+* When using "Azure Blob Storage" +
+When using "Azure Blob Storage", complete the settings available in https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-azure-blob-storage[External transfer setting tutorial(Azure Blob Storage)]. +
+* When using "Local Storage" +
+When using "Local Storage", complete the settings available in the https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-http-server[External transfer settings tutorial(Local HTTP Server)].
++
+
+IMPORTANT: Uploads from the device to HTTP Server are not encrypted due to HTTP communication.
 
 == Functional overview
 "**Visualization**" specifies the edge AI device registered in the "**Console**" and gets inference results and images. + 
@@ -94,6 +125,7 @@ There are two modes of operation: Realtime Mode, which gets the latest inference
 "**Visualization**" can be run in one of the following environments:
 
 * GitHub Codespaces (Hereafter referred to as Codespaces)
+** However, when checking the inference results uploaded to "Local Storage", Codespaces cannot be used.
 * Dev Container using Visual Studio Code (Hereafter referred to as VS Code) and Docker
 * Docker container
 * Node.js
@@ -108,7 +140,7 @@ To set up and run Node.js on your PC, see the next step.
 . Install Node.js + 
 Get the installer for your environment from https://nodejs.org/en/download/[the official site] and install it. +
 +
-IMPORTANT: Use version 16 of Node.js.
+IMPORTANT: Use version 18 of Node.js.
 
 . Clone the repository + 
 Clone the "**Visualization**" repository to any directory. If you use the git command, you can clone a repository containing submodules by running the following command:
@@ -127,7 +159,7 @@ Use the connection information prepared in the <<#_precondition,"Prerequisite">>
 
 === Set connection information
 . Create the [console_access_settings.yaml] under the [src/common] on Codespaces or on an environment that has cloned a repository, and set the connection information.
-
+-	When using "**Console Developer Edition**"
 +
 |===
 |src/common/console_access_settings.yaml
@@ -142,44 +174,148 @@ console_access_settings:
 ----
 |===
 +
-* Specify the console endpoint in `**console_endpoint**`. +
-* Specify the portal authorization endpoint in `**portal_authorization_endpoint**`. +
-* Specify the secret of the registered application to the `**client_secret**`. +
-* Specify the client ID of the registered application to the `**client_id**`. +
+* Specify the Console endpoint in `**console_endpoint**`. +
+* Specify the Portal authorization endpoint in `**portal_authorization_endpoint**`. +
+* Specify the Secret of the registered application to the `**client_secret**`. +
+* Specify the Client ID of the registered application to the `**client_id**`. +
 +
 
-IMPORTANT: See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for how to get client ID and secret. + 
-See the link:++https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication++[this material]  for how to get console endpoint and portal authorization endpoint. + 
+IMPORTANT: See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for how to get Client ID and Secret. + 
+See the link:++https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication++[this material]  for how to get Console endpoint and Portal authorization endpoint. + 
 These will give you access to the "**Console**". + 
 Do not publish or share with others and handle with care.
 +
 NOTE: To run the "**Visualization**" in a proxy environment, set the `**https_proxy**` environment variable.
 
 
-=== Launch "**Visualization**"
+- When using "**Console Enterprise Edition**"
++
+|===
+|src/common/console_access_settings.yaml
+a|
+[source,Yaml]
+----
+console_access_settings:
+  console_endpoint: "Console endpoint"
+  portal_authorization_endpoint: "Portal authorization endpoint"
+  client_secret: "Secret"
+  client_id: "Client ID"
+  application_id: "Application ID"
+----
+|===
++
+* Speech Console endpoint to `**console_endpoint**` +
+* Specify the Portal authentication endpoint in `**portal_authorization_endpoint**`. +
+The Portal authentication endpoint is specified in the format of `**\https://login.microsoftonline.com/{TenantID}**`. +
+*	In `**client_secret**`, specify the Secret of the registered application. +
+*	In `**client_id**`, specify the Client ID of the registered application. +
+*	In `**application_id**`, specify the Application ID of the registered application. +
++
 
+IMPORTANT: For details on how to fetch the Console endpoint, Client ID, Secret and Tenant ID and Application ID, please contact "**Console**" deployment representative (Service Administrator). +
+Do not disclose it to the public or share it with others, handle it with care. +
++
+NOTE: When executing "**Visualization**" in the Proxy environment, set the environment variable `**https_proxy**`.
+
+. Create [azure_access_settings.yaml] under [src/common] in the environment where Codespaces or the repository is cloned and set the connection destination information. +
+This is set when the destination to obtain the inference results is "Azure Blob Storage".
+
++
+|===
+|src/common/azure_access_settings.yaml
+a|
+[source,Yaml]
+----
+azure_access_settings:
+  connection_string: "Connection info"
+  container_name: "Container name"
+----
+|===
++
+* specify the Connection information of "Azure Blob Storage" in `**connection_string**`. +
+* Specify the Container name of "Azure Blob Storage" in `**container_name**`. +
++
+
+IMPORTANT: These are the access information to "Azure Blob Storage". +
+Do not disclose it to the public or share it with others, handle it with care.
+
+. In the environment  Codespaces or the repository is cloned, set the connection destination information to [settings.ts] under [src/common].
++
+|===
+|src/common/settings.ts
+a|
+[source,TypeScript]
+----
+export const SERVICE = {
+  Console: 'console',
+  Azure: 'azure',
+  Local: 'local'
+} as const
+type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE];
+
+export const CONNECTION_DESTINATION: SERVICE_TYPE = SERVICE.Console
+export const LOCAL_ROOT = ''
+----
+|===
++
+* In `**CONNECTION_DESTINATION**`, set the destination location from where the inference results are fetched. The default setting is `**SERVICE.Console**`.
+* Specify the path of "Local Storage" in `**LOCAL_ROOT**`. +
+This setting is used when `**SERVICE.Local**` is specified in `**CONNECTION_DESTINATION**`.
+
+NOTE: When using the Dev Container environment, the folder is placed in the folder where Local Storage is git cloned folder and +
+Set LOCAL_ROOT to `**/workspace/{folder created within the folder where git  is cloned}**`.
+
+=== Launch "**Visualization**"
+It is the setting value of [settings.ts] under [src/common], and the startup method differs depending on the usage environment.
+|===
+|settings.ts settings|How to start it in the Docker container|How to start it in other environments
+|SERVICE.Console|<<#_DockerExec,When not to use "Local Storage".>>|<<#_OtherExec,How to start it in other environments>>
+|SERVICE.Azure|<<#_DockerExec,When not to use "Local Storage".>>|<<#_OtherExec,How to start it in other environments>>
+|SERVICE.Local|<<#_DockerExec,When using "Local Storage".>>|<<#_OtherExec,How to start it in other environments>>
+|===
+
+[#_DockerExec]
 ==== How to launch in a Docker container
 
 . Launch terminal in a directory cloned from the repository
 
 . Run the following command in the terminal
 +
+When not to use "Local Storage"
++
 [source, Bash]
 ----
 docker build . -t visualization-app
 docker run -p 3000:3000 -d visualization-app
 ----
++
+When using "Local Storage"
++
+[source, Bash]
+----
+docker build . -t visualization-app
+docker run -p 3000:3000 -d -v {Local Storage folder}:{Mount destination of Local Storage (LOCAL_ROOT setting value)} visualization-app
+----
 NOTE: If port number 3000 is already in use, it will fail to launch with the error: "failed: port is already allocated". 
 Change the 3000 of the command to an unused port number.
 
 
-. If you want to change the connection information after launching the container, run the following command:
+.	If you want to change the "**Console**" connection information after launching the container, run the following command:
 +
 [source, Bash]
 ----
 docker cp src/common/console_access_settings.yaml {Container name}:/app/src/common/console_access_settings.yaml
 ----
 
+. To change the destination to obtain the inference results after the container is launched, execute the following command after changing the destination to obtain the inference results and the connection information.
++
+[source,Bash]
+----
+docker build . -t visualization-app
+----
+
+
+[#_OtherExec]
 ==== How to launch in other environments
 . Launch terminal in Codespaces or a directory cloned from the **Visualization** repository
 . Run the following command to install the packages needed for the cloned "**Visualization**": (No need for Codespaces since they are automatically installed)
@@ -194,7 +330,8 @@ NOTE: If the error "npm ERR! gyp ERR! build error" occurs when running the prece
 +
 [source, Bash]
 ----
-npm run dev
+npm run build
+npm run start
 ----
 
 === Work with "**Visualization**"
@@ -242,7 +379,7 @@ The function of each display part is as follows:
 |Inference results are overlaid on the image taken by the edge AI device and displayed
 
 |[**Inference Result**] at the bottom left of the screen
-|Raw data of inference results gotten from the "**Console**" is displayed
+|Displays the raw data for the inference results fetched from the destination location as specified by the user.
 |[**Label Setting**] at the bottom right of the screen
 |You can list and edit the labels used to display inference results.
 |[**Import Labels**] at the bottom of the screen
@@ -273,7 +410,7 @@ The function of each display part is as follows:
 The list on the right displays labels being inferred with the score.
 
 |[**Inference Result**] at the bottom left of the screen
-|Raw data of inference results gotten from the "**Console**" is displayed
+|Displays the raw data of the inference results fetched from the destination location as specified by the user. 
 |[**Label Setting**] at the bottom right of the screen
 |You can list and edit the labels used to display inference results.
 |[**Import Labels**] at the bottom of the screen
@@ -307,7 +444,7 @@ The function of each display part is as follows:
 |Inference results are overlaid on the image taken by the edge AI device and displayed.
 The list on the right displays labels being inferred with the score.
 |[**Inference Result**] at the bottom left of the screen
-|Raw data of inference results gotten from the "**Console**" is displayed.
+|Displays the raw data of the inference results fetched from the destination location as specified by the user. 
 |[**Label Table**] at the bottom of the screen
 |Displays the label table used to display inference results. +
 |[**Visible**] in [**Label Table**]
@@ -482,32 +619,35 @@ The meaning of each parameter is as follows:
 [**Device Name**] is left unselected after pressing the button
 
 |[**Polling Interval**] slider
-|Sets the polling interval when getting data from the "**Console**" +
+|Sets the polling interval at the time of fetching data from the destination connection location as specified by the user. +
 The polling interval is displayed numerically to the right of the slider.
 
 |[**Start Upload**]/[**Stop Upload**] button
 |Starts/Stops uploading images and inference results
 
 |[**Start Polling**]/[**Stop Polling**] button
-|Starts/Stops getting and displaying the latest image/inference results from the "**Console**"
+|Starts/stops fetching and displaying the latest image(s) and inference results from the destination connection location as specified by the user.
 
 |===
 +
 
 . Instruct the edge AI device to start inference + 
-Press the [**Start Upload**] to instruct the edge AI device to start inference. + 
-Starting inference starts uploading images and inference results from the edge AI device to the "**Console**".
+Press the [**Start Upload**] to instruct the edge AI device to start inference. +
+Once the inference is initiated, it starts uploading the image(s) and inference results from Edge AI
+device to the connection destination location specified by the user.
 
 . Start updating inference result display + 
-Press the [**Start Polling**] to display images and inference results gotten from the "**Console**" on the left side of the screen. + 
-Gets the latest image and inference results and updates the display at the frequency set by [**Polling Interval**].
+On clicking [**Start Polling**], it displays on the left-side of the screen the images and inference results that were uploaded to the destination location specified by the user. +
+Gets the latest image and inference results and updates the display at the frequency set by [**Polling Interval**]. +
+When the data acquisition time exceeds [**Polling Interval**], [**Stop Polling**] is automatically executed.
 
 . Stop updating inference result display + 
-Press the [**Stop Polling**] to stop updating display and getting images and inference results from the "**Console**".
+Press [**Stop Polling**] to stop updating display and to stop fetching images, inference results from the destination location specified by the user.
 
 . Instruct the edge AI device to stop inference + 
-Press the [**Stop Upload**] to instruct the edge AI device to stop inference. + 
-Stopping inference also stops uploading images and inference results from the edge AI device to the "**Console**".
+Press the [**Stop Upload**] to instruct the edge AI device to stop inference. +
+On stopping the inferences, it stops uploading the images, inference results from Edge AI device to the
+destination location specified by the user.
 +
 [NOTE]
 ====
@@ -543,7 +683,7 @@ The index is displayed numerically to the right of the slider +
 When the value of the slider is changed, updates to inference source image with date and time tied to index
 
 |[**Sub Directory**] drop-down list
-|Selects the Sub Directory of images stored in the "**Console**"
+|Selects the Sub Directory of images stored in the destination connection location specified by the user.
 
 |[**Interval Time**] slider
 |Sets the playing interval when updating inference source images +
@@ -559,7 +699,8 @@ The playing interval is displayed numerically to the right of the slider
 
 . Start displaying inference results + 
 Press the [**Start Playing**] to display images and inference results in the directory selected by the [**Sub Directory**] on the left side of the screen. + 
-The display is sequentially updated at intervals set by [**Interval Time**] from the index set by [**Image Selection**]. + 
+The display is sequentially updated at intervals set by [**Interval Time**] from the index set by [**Image Selection**].  +
+When the data acquisition time exceeds [**Interval Time**], [**Stop Playing**] is automatically executed. 
 . Stop displaying inference results + 
 Pressing the [**Stop Upload**] stops display updates. + 
 
@@ -601,5 +742,5 @@ For customization procedures, see link:CloudSDK_CustomizeGuideline_Visualization
 * If there are more than 1000 images in a subdirectory in History Mode or Realtime Mode, the playback order of the images may be disturbed.
 
 
-=== About base AI Models supported by "**Visualization**"
-The supported base AI models are Object Detection, Classification, and Semantic Segmentation.
+=== About AI Models supported by "**Visualization**"
+The supported AI models are Object Detection, Classification, and Semantic Segmentation.

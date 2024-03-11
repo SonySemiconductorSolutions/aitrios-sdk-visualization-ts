@@ -20,6 +20,7 @@ import { WORK_DIR, getTimestampFromImageFIleName } from '../../../hooks/fileUtil
 import Sharp from 'sharp'
 import * as util from '../../../hooks/util'
 import { OBJECT_DETECTION, CLASSIFICATION, SEGMENTATION } from '../../../pages/index'
+import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
 
 /**
  * Get timestamp from Directory name.
@@ -167,7 +168,12 @@ const overlaidImageOD = async (inferenceDataPath: string, rawImagePath: string, 
     const timestamp = path.basename(inferenceDataPath, '.json')
     const loadJson = fs.readFileSync(inferenceDataPath)
     const parsedJson = JSON.parse(loadJson.toString())
-    const srcInference = util.convertInferencesOD(parsedJson.inference_result.Inferences[0].O[0])
+    let srcInference
+    if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+      srcInference = util.convertInferencesOD(parsedJson.inference_result.Inferences[0].O[0])
+    } else {
+      srcInference = util.convertInferencesOD(parsedJson.Inferences[0].O[0])
+    }
 
     // load image and create margin area
     const canvas = await createCanvas(rawImagePath, { x: WIDTH_MARGIN * 2, y: HEIGHT_MARGIN * 2 })
@@ -218,8 +224,12 @@ export const overlaidImageCL = async (inferenceDataPath: string, rawImagePath: s
     const timestamp = path.basename(inferenceDataPath, '.json')
     const loadJson = fs.readFileSync(inferenceDataPath)
     const parsedJson = JSON.parse(loadJson.toString())
-    const srcInference = util.convertInferencesCls(parsedJson.inference_result.Inferences[0].O[0])
-
+    let srcInference
+    if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+      srcInference = util.convertInferencesCls(parsedJson.inference_result.Inferences[0].O[0])
+    } else {
+      srcInference = util.convertInferencesCls(parsedJson.Inferences[0].O[0])
+    }
     // load image and create margin area
     const canvas = await createCanvas(rawImagePath, { x: WIDTH_MARGIN * 2, y: HEIGHT_MARGIN * 2 })
     if (canvas !== undefined) {
@@ -261,7 +271,12 @@ const overlaidImageSEG = async (inferenceDataPath: string, rawImagePath: string,
     const timestamp = path.basename(inferenceDataPath, '.json')
     const loadJson = fs.readFileSync(inferenceDataPath)
     const parsedJson = JSON.parse(loadJson.toString())
-    const inferenceSEG: util.SegInferenceProps = parsedJson.inference_result.Inferences[0]
+    let inferenceSEG: util.SegInferenceProps
+    if (CONNECTION_DESTINATION.toString() === SERVICE.Console) {
+      inferenceSEG = parsedJson.inference_result.Inferences[0]
+    } else {
+      inferenceSEG = parsedJson.Inferences[0]
+    }
 
     // load image and create margin area
     const canvas = await createCanvas(rawImagePath, { x: WIDTH_MARGIN * 2, y: HEIGHT_MARGIN * 2 })

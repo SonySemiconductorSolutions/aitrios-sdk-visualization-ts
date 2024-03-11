@@ -23,25 +23,42 @@
 |2023/1/30
 |「**Cloud SDK**」の0.2.0に対応
 
-|2023/5/26
-|ローカル保存対応 +
-Semantic Segmentation追加対応 +
-クライアントIDとシークレット取得方法追加対応 +
+|2023/3/22
+|保存機能追加対応 +
+Semantic Segmentation追加対応
+
+|2023/4/13
+|クライアントIDとシークレット取得方法追加対応 +
 VS Code拡張機能の名称変更対応 +
-ツール名の括弧の表記を修正 +
-デバイスID選択をデバイス名選択へ変更する対応 +
-DockerBuild対応 +
-サブディレクトリ内画像が1枚の場合の文言変更 +
-画像数によって再生順が乱れる旨を追加
+ツール名の括弧の表記を修正
+
+|2023/05/26
+|図の代替テキスト修正
+
+|2023/6/6
+|デバイスID選択をデバイス名選択へ変更する対応 +
+一部の環境で文字化けが発生する旨を追加
+
+|2023/6/8
+|Dockerコンテナ起動方法追加
+
+|2023/6/20
+|画像数によって再生順が乱れる旨を追加
 
 |2023/7/5
 |カスタマイズ方法を追加
+
+|2023/07/25
+|NodeのVersionを16から18に変更
+
+|2023/09/01
+|Console Developer EditionとConsole Enterprise Edition対応
 
 |===
 
 == はじめに
 このチュートリアルでは、「**Visualization**」の利用方法について解説します。 +
-「**Visualization**」は、エッジAIデバイスが「**Console**」へアップロードした推論結果を確認するために用意しています。
+「**Visualization**」は、エッジAIデバイスが「**Console**」「Azure Blob Storage」「Local Storage」へアップロードした推論結果を確認するために用意しています。
 
 [#_precondition]
 == 前提条件
@@ -50,8 +67,9 @@ DockerBuild対応 +
 取得した情報は<<#_Execute_visualization,「Visualization」使用方法>>で利用します。 +
 必要な接続情報は下記の通りです。
 
-* クライアントアプリ詳細情報
-** 「**Portal for AITRIOS**」のクライアントアプリ一覧から参照または、必要に応じてサンプルアプリケーション向けのクライアントアプリ登録を行い、下記情報の取得を行ってください。
+* クライアントアプリケーション詳細情報
+- 「**Console Developer Edition**」を使用している場合
+** 「**Portal for AITRIOS**」のクライアントアプリケーション一覧から参照または、必要に応じてサンプルアプリケーション向けのクライアントアプリケーション登録を行い、下記情報の取得を行ってください。
 詳細は、 https://developer.aitrios.sony-semicon.com/documents/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。
 *** クライアントID
 *** シークレット
@@ -60,19 +78,43 @@ DockerBuild対応 +
 *** コンソールエンドポイント
 *** ポータル認証エンドポイント
 
+- 「**Console Enterprise Edition**」を使用している場合
+** 「**Console**」の導入担当者(Service Administrator)に問い合わせください。
+
+
+「Azure Blob Storage」を使用するには、「Azure Blob Storage」へアクセスするための接続情報が必要になります。
+詳細は、 https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account[ 「**Configure a connection string for an Azure storage account**」 ]をお読みください。
+
 === エッジAIデバイス
 「**Visualization**」を正常に動作させるためには、利用するエッジAIデバイスに特定の設定が必要になります。 +
 必要な設定内容は下記の通りです。
 
 * AIモデルやアプリケーションがデプロイされていること
-* ベースAIモデルに、Object Detectionまたは、Classification、Semantic SegmentationのAIモデルがデプロイされていること
+* AIモデルに、Object Detectionまたは、Classification、Semantic SegmentationのAIモデルがデプロイされていること
 * 「**Console**」のUIから、利用するCommand Parameter Fileを下記の設定にしておくこと
 +
 
-** Mode=1(Image&Inference Result) 
-** UploadMethodIR="Mqtt" 
+** 「**Console**」利用時 +
+記述しなかった場合は以下の値が自動で設定されます。 +
+UploadMethod="BlobStorage" +
+UploadMethodIR="Mqtt"
+** 「Azure Blob Storage」 +
+UploadMethod="BlobStorage" +
+UploadMethodIR="BlobStorage"
+** 「Local Storage」 +
+UploadMethod="HTTPStorage" +
+UploadMethodIR="HTTPStorage" 
++
 ** AIモデルやアプリケーションの内容に応じて、その他のパラメータも変更する必要がある
 
+=== 外部転送設定
+* 「Azure Blob Storage」利用時 +
+「Azure Blob Storage」を使用する場合は、 https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-azure-blob-storage[外部転送設定チュートリアル(Azure Blob Storage)]の設定を完了させてください。
+* 「Local Storage」利用時 +
+「Local Storage」を使用する場合は、 https://developer.aitrios.sony-semicon.com/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-http-server[外部転送設定チュートリアル(Local HTTP Server)]の設定を完了させてください。
++
+
+IMPORTANT: デバイスからHTTP ServerへのアップロードはHTTP通信のため暗号化されません。
 
 == 機能概要
 「**Visualization**」では、「**Console**」に登録されたエッジAIデバイスを指定し、推論結果と画像を取得する機能を実装しています。 +
@@ -83,21 +125,22 @@ DockerBuild対応 +
 「**Visualization**」は下記のいずれかの環境で動作させることができます。
 
 * GitHub Codespaces(以下Codespaces)環境
+** ただし、「Local Storage」へアップロードされた推論結果を確認する場合、Codespacesは利用できません。
 * Visual Studio Code(以下VS Code)とDockerを利用したDev Container環境
 * Dockerコンテナ
 * Node.js環境
 
 == 環境セットアップ
 
-Codespaces、VS Codeおよび、Dockerのセットアップについては https://developer.aitrios.sony-semicon.com/downloads#sdk-getting-started[「**SDK スタートガイド**」] を参照してください。 +
+Codespaces、VS Codeおよび、Dockerのセットアップは https://developer.aitrios.sony-semicon.com/file/download/develop-env-setup/[「**SDK スタートガイド**」] を参照してください。 +
 お使いのPC上にNode.js環境をセットアップして実行する場合は、下記の手順を参照してください。
 
 === Node.js環境をセットアップする
 
 . Node.jsをインストールする +
-お使いの環境向けのインストーラを https://nodejs.org/ja/download/[公式サイト] から取得し、インストールしてください。 +
+お使いの環境向けのインストーラを https://nodejs.org/en/download/[公式サイト] から取得し、インストールしてください。 +
 +
-IMPORTANT: Node.jsのバージョンはv16を使用してください。
+IMPORTANT: Node.jsのバージョンはv18を使用してください。
 
 . リポジトリをCloneする +
 任意のディレクトリに「**Visualization**」のリポジトリをCloneします。gitコマンドを利用する場合は、下記のコマンドを実行してサブモジュールを含むリポジトリをCloneできます。
@@ -107,7 +150,7 @@ IMPORTANT: Node.jsのバージョンはv16を使用してください。
 git clone --recursive https://github.com/SonySemiconductorSolutions/aitrios-sdk-visualization-ts.git
 ----
 +
-その他のClone方法については、 https://docs.github.com/ja/repositories/creating-and-managing-repositories/cloning-a-repository[GitHub Docs] を参照してください。
+その他のClone方法は、 https://docs.github.com/ja/repositories/creating-and-managing-repositories/cloning-a-repository[GitHub Docs] を参照してください。
 
 [#_Execute_visualization]
 == 「**Visualization**」使用方法
@@ -116,7 +159,7 @@ git clone --recursive https://github.com/SonySemiconductorSolutions/aitrios-sdk-
 
 === 接続情報を設定する
 . Codespacesまたは、リポジトリをCloneした環境上で [src/common]配下に[console_access_settings.yaml]を作成し接続先情報を設定します。
-
+- 「**Console Developer Edition**」を使用している場合
 +
 |===
 |src/common/console_access_settings.yaml
@@ -144,31 +187,135 @@ IMPORTANT: クライアントIDとシークレットの取得方法詳細は、 
 +
 NOTE: Proxy環境で「**Visualization**」を実行する場合、環境変数 `**https_proxy**` の設定をしてください。
 
+- 「**Console Enterprise Edition**」を使用している場合
++
+|===
+|src/common/console_access_settings.yaml
+a|
+[source,Yaml]
+----
+console_access_settings:
+  console_endpoint: "コンソールエンドポイント"
+  portal_authorization_endpoint: "ポータル認証エンドポイント"
+  client_secret: "シークレット"
+  client_id: "クライアントID"
+  application_id: "アプリケーションID"
+----
+|===
++
+* `**console_endpoint**` に、コンソールエンドポイントを指定します。 +
+* `**portal_authorization_endpoint**` に、ポータル認証エンドポイントを指定します。 +
+ポータル認証エンドポイントは、 `**\https://login.microsoftonline.com/{テナントID}**`  の形式で指定します。 +
+* `**client_secret**` に、登録したアプリケーションのシークレットを指定します。 +
+* `**client_id**` に、登録したアプリケーションのクライアントIDを指定します。 +
+* `**application_id**` に、登録したアプリケーションのアプリケーションIDを指定します。 +
++
+
+IMPORTANT: コンソールエンドポイントとクライアントIDとシークレットとテナントIDとアプリケーションIDの取得方法詳細は、「**Console**」の導入担当者(Service Administrator)に問い合わせください。 +
+これらは「**Console**」へのアクセス情報となります。 +
+公開したり、他者との共有をせず、取り扱いには十分注意してください。 +
++
+NOTE: Proxy環境で「**Visualization**」を実行する場合、環境変数 `**https_proxy**` の設定をしてください。
+
+. Codespacesまたは、リポジトリをCloneした環境上で [src/common]配下に[azure_access_settings.yaml]を作成し接続先情報を設定します。 +
+本設定は、推論結果取得先が「Azure Blob Storage」の時に設定します。
+
++
+|===
+|src/common/azure_access_settings.yaml
+a|
+[source,Yaml]
+----
+azure_access_settings:
+  connection_string: "接続情報"
+  container_name: "コンテナ名"
+----
+|===
++
+* `**connection_string**` に、「Azure Blob Storage」の接続情報を指定します。 +
+* `**container_name**` に、「Azure Blob Storage」のコンテナ名を指定します。 +
++
+
+IMPORTANT: これらは「Azure Blob Storage」へのアクセス情報となります。 +
+公開したり、他者との共有をせず、取り扱いには十分注意してください。 +
+
+. Codespacesまたは、リポジトリをCloneした環境上で [src/common]配下に[settings.ts]に接続先情報を設定します。
++
+|===
+|src/common/settings.ts
+a|
+[source,TypeScript]
+----
+export const SERVICE = {
+  Console: 'console',
+  Azure: 'azure',
+  Local: 'local'
+} as const
+type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE];
+
+export const CONNECTION_DESTINATION: SERVICE_TYPE = SERVICE.Console
+export const LOCAL_ROOT = ''
+----
+|===
++
+* `**CONNECTION_DESTINATION**` に、推論結果取得先を設定します。デフォルト値は `**SERVICE.Console**` 設定です。 +
+* `**LOCAL_ROOT**` に、「Local Storage」のパスを指定します。 +
+本設定は、 `**CONNECTION_DESTINATION**` に `**SERVICE.local**` を指定した場合に利用されます。 +
+
+NOTE: Dev Container環境を利用する場合、Local Storageをgit cloneしたフォルダ内にフォルダ作成し、 +
+LOCAL_ROOTは `**/workspace/{git cloneしたフォルダ内に作成したフォルダ}**` と設定する。
 
 === 「**Visualization**」を起動する
+[src/common]配下に[settings.ts]の設定値で、利用環境により起動方法が異なります。
+|===
+|settings.ts設定|Dockerコンテナでの起動方法|それ以外の環境での起動方法
+|SERVICE.Console|<<#_DockerExec,「Local Storage」を使用しない場合>>|<<#_OtherExec,それ以外の環境での起動方法>>
+|SERVICE.Azure|<<#_DockerExec,「Local Storage」を使用しない場合>>|<<#_OtherExec,それ以外の環境での起動方法>>
+|SERVICE.Local|<<#_DockerExec,「Local Storage」を使用する場合>>|<<#_OtherExec,それ以外の環境での起動方法>>
+|===
 
+[#_DockerExec]
 ==== Dockerコンテナでの起動方法
 
 . リポジトリをCloneしたディレクトリでターミナルを起動する
 
 . ターミナルで下記のコマンドを実行する
 +
+「Local Storage」を使用しない場合
++
 [source,Bash]
 ----
 docker build . -t visualization-app
 docker run -p 3000:3000 -d visualization-app
 ----
++
+「Local Storage」を使用する場合
++
+[source,Bash]
+----
+docker build . -t visualization-app
+docker run -p 3000:3000 -d -v {Local Storageフォルダ}:{Local Storageのマウント先(LOCAL_ROOT設定値)} visualization-app
+----
++
 NOTE: ポート番号 3000 が既に使用されている場合は、 "failed: port is already allocated."のエラーが発生し起動できません。
 コマンドの 3000 の部分を使用していないポート番号に変更してください。
 
 
-. コンテナ起動後に接続情報を変更したい場合は、接続情報の変更後に下記コマンドを実行してください。
+. コンテナ起動後に「**Console**」接続情報を変更したい場合は、接続情報の変更後に下記コマンドを実行してください。
 +
 [source,Bash]
 ----
 docker cp src/common/console_access_settings.yaml {コンテナ名}:/app/src/common/console_access_settings.yaml
 ----
 
+. コンテナ起動後に推論結果取得先を変更したい場合は、推論結果取得先、接続情報の変更後に下記コマンドを実行してください。
++
+[source,Bash]
+----
+docker build . -t visualization-app
+----
+
+[#_OtherExec]
 ==== それ以外の環境での起動方法
 . Codespacesまたは、「**Visualization**」のリポジトリをCloneしたディレクトリでターミナルを起動する
 . 下記コマンドを実行して、Cloneした「**Visualization**」に必要なパッケージをインストールする。(Codespacesの場合は自動インストールされるため、不要)
@@ -183,7 +330,8 @@ NOTE: 上記コマンド実行時に「npm ERR! gyp ERR! build error」という
 +
 [source,Bash]
 ----
-npm run dev
+npm run build
+npm run start
 ----
 
 === 「**Visualization**」を操作する
@@ -195,7 +343,7 @@ NOTE: 起動時にポート番号を変更している場合はアクセスで�
 URLの 3000 の部分を変更したポート番号に置き換えてください。
 
 . 対象のAIモデルを指定する +
-画面左上のタブを選択することで、AIモデルにあわせた表示モードの切り替えができます。 +
+画面左上のタブを選択することで、AIモデルに合わせた表示モードの切り替えができます。 +
 Object Detection向けの表示項目の確認は<<#_ObjectDetection,「Object Detectionの表示項目」>>へ進んでください。 +
 Classification向けの表示項目の確認は<<#_Classification,「Classificationの表示項目」>>へ進んでください。 +
 Semantic Segmentation向けの表示項目の確認は<<#_Segmentation,「Segmentationの表示項目」>>へ進んでください。 +
@@ -210,7 +358,7 @@ Semantic Segmentation向けの表示項目の確認は<<#_Segmentation,「Segmen
 過去の推論結果を取得する場合は、<<#_HistoryMode,「過去の画像/推論結果を確認する」>>へ進んでください。
 
 . データを保存する +
-画像と推論結果、画像に推論結果を合わせた重ね合わせ画像としてローカルに保存することができます。 +
+画像と推論結果、画像に推論結果を合わせた重ね合わせ画像としてローカルに保存できます。 +
 データを保存する場合は、<<#_SaveData,「データを保存する」>>へ進んでください。 + 
 
 [#_ObjectDetection]
@@ -219,7 +367,7 @@ Semantic Segmentation向けの表示項目の確認は<<#_Segmentation,「Segmen
 [**Object Detection**]タブを選択することで、Object DetectionのAIモデルを利用した推論結果を表示させることができます。
 +
 image::ObjectDetectionAITask.png[alt="Object Detectionの表示項目", width="600"]
-各表示パーツの機能は下記のとおりです。
+各表示パーツの機能は下記の通りです。
 +
 |===
 |表示パーツ |機能説明 
@@ -231,14 +379,14 @@ image::ObjectDetectionAITask.png[alt="Object Detectionの表示項目", width="6
 |エッジAIデバイスで撮影した画像と推論結果の重畳表示を行います。
 
 |画面下側の[**Inference Result**]
-|「**Console**」から取得した推論結果の生データが表示されます。
+|ユーザーが指定した接続先から取得した推論結果の生データが表示されます。
 |画面下側の[**Label Setting**]
 |推論結果の表示に利用するラベルのリスト表示および、編集を行うことができます。
 |画面下側の[**Import Labels**]
 |ローカルに保存されているラベルファイルを読み込み表示します。
 |画面下側の[**Export Labels**]
 |表示されているラベル情報をローカルに保存します。 + 
-ラベル名の編集方法については、<<#_Label-setting,「表示ラベルの設定を変更する」>>を参照してください。
+ラベル名の編集方法は、<<#_Label-setting,「表示ラベルの設定を変更する」>>を参照してください。
 |===
 +
 
@@ -249,7 +397,7 @@ image::ObjectDetectionAITask.png[alt="Object Detectionの表示項目", width="6
 [**Classification**]タブを選択することで、ClassificationのAIモデルを利用した推論結果を表示させることができます。
 +
 image::ClassificationAITask.png[alt="Classificationの表示項目", width="600"]
-各表示パーツの機能は下記のとおりです。
+各表示パーツの機能は下記の通りです。
 +
 |===
 |表示パーツ |機能説明 
@@ -262,14 +410,14 @@ image::ClassificationAITask.png[alt="Classificationの表示項目", width="600"
 右側のリストに識別中のラベルがスコアと共に表示されます。
 
 |画面下側の[**Inference Result**]
-|「**Console**」から取得した推論結果の生データが表示されます。
+|ユーザーが指定した接続先から取得した推論結果の生データが表示されます。
 |画面下側の[**Label Setting**]
 |推論結果の表示に利用するラベルのリスト表示および、編集を行うことができます。
 |画面下側の[**Import Labels**]
 |ローカルに保存されているラベルファイルを読み込み表示します。
 |画面下側の[**Export Labels**]
 |表示されているラベル情報をローカルに保存します。  +
-ラベル名の編集方法については、<<#_Label-setting,「表示ラベルの設定を変更する」>>を参照してください。
+ラベル名の編集方法は、<<#_Label-setting,「表示ラベルの設定を変更する」>>を参照してください。
 |===
 +
 [NOTE]
@@ -284,7 +432,7 @@ image::ClassificationAITask.png[alt="Classificationの表示項目", width="600"
 [**Segmentation**]タブを選択することで、Semantic SegmentationのAIモデルを利用した推論結果を表示させることができます。
 +
 image::SegmentationAITask.png[alt="Segmentationの表示項目", width="600"]
-各表示パーツの機能は下記のとおりです。
+各表示パーツの機能は下記の通りです。
 +
 |===
 |表示パーツ |機能説明 
@@ -296,7 +444,7 @@ image::SegmentationAITask.png[alt="Segmentationの表示項目", width="600"]
 |エッジAIデバイスで撮影した画像と推論結果の重畳表示を行います。
 右側のリストに識別中のラベルがスコアと共に表示されます。
 |画面下側の[**Inference Result**]
-|「**Console**」から取得した推論結果の生データが表示されます。
+|ユーザーが指定した接続先から取得した推論結果の生データが表示されます。
 |画面下側の[**Label Table**]
 |推論結果の表示に利用するラベルテーブルの表示します。 +
 |[**Label Table**]の[**Visible**]
@@ -321,7 +469,7 @@ image::SegmentationAITask.png[alt="Segmentationの表示項目", width="600"]
 |ローカルに保存されているラベルファイルを読み込み表示します。
 |画面下側の[**Export Labels**]
 |表示されているラベル情報をローカルに保存します。  +
-ラベル名の編集方法については、<<#_Label-setting,「表示ラベルの設定を変更する」>>を参照してください。
+ラベル名の編集方法は、<<#_Label-setting,「表示ラベルの設定を変更する」>>を参照してください。
 |===
 
 
@@ -395,11 +543,11 @@ image::SegmentationDisplaySetting.png[alt="SegmentationのDisplay Setting", widt
 
 * テキストボックスから直接編集する +
 ラベルはAIモデルが識別するクラスID順に書き込みます。 +
-[**Object Detection**]と[**Classification**]の場合、改行区切りでラベルを設定することができます。 
+[**Object Detection**]と[**Classification**]の場合、改行区切りでラベルを設定できます。 
 +
 image::LabelSetting.png[alt="Object DetectionとClassificationの表示ラベル設定", width="600"]
 +
-[**Segmentation**]の場合、ラベルの表示/非表示、ラベル名の変更、ラベルの色指定を設定することができます。 +
+[**Segmentation**]の場合、ラベルの表示/非表示、ラベル名の変更、ラベルの色指定を設定できます。 +
 +
 image::LabelSetting_Seg.png[alt="Segmentationの表示ラベル設定", width="600"]
 +
@@ -480,32 +628,32 @@ image::RealtimeModeSetting.png[alt="Realtime Modeの表示項目", width="700"]
 ボタン押下後、[**Device Name**]が未選択の状態にする
 
 |[**Polling Interval**]スライダー
-|「**Console**」からデータ取得する時のPolling間隔を設定する +
+|ユーザーが指定した接続先からデータ取得する時のPolling間隔を設定する +
 Polling間隔はスライダーの右横に数字で記載する
 
 |[**Start Upload**]/[**Stop Upload**]ボタン
 |画像と推論結果のアップロードを開始/停止する
 
 |[**Start Polling**]/[**Stop Polling**]ボタン
-|「**Console**」から最新の画像・推論結果の取得と、表示を開始/停止する
+|ユーザーが指定した接続先から最新の画像・推論結果の取得と、表示を開始/停止する
 
 |===
 +
 
 . エッジAIデバイスに推論開始を指示する +
-[**Start Upload**]を押下すると、エッジAIデバイスに推論開始を指示することができます。 +
-推論が開始されると、エッジAIデバイスから「**Console**」に画像と推論結果のアップロードが開始されます。
+[**Start Upload**]を押下すると、エッジAIデバイスに推論開始を指示できます。 +
+推論が開始されると、エッジAIデバイスからユーザーが指定した接続先に画像と推論結果のアップロードが開始されます。
 
 . 推論結果の表示更新を開始する +
-[**Start Polling**]を押下すると、画面左側に「**Console**」にアップロードされた画像と推論結果が表示されます。 +
+[**Start Polling**]を押下すると、画面左側にユーザーが指定した接続先にアップロードされた画像と推論結果が表示されます。 +
 [**Polling Interval**]で設定した周期で、最新の画像と推論結果を取得して表示を更新します。
 
 . 推論結果の表示更新を停止する +
-[**Stop Polling**]を押下すると、表示更新と「**Console**」からの画像と推論結果の取得を停止します。
+[**Stop Polling**]を押下すると、表示更新とユーザーが指定した接続先からの画像と推論結果の取得を停止します。
 
 . エッジAIデバイスに推論停止を指示する +
-[**Stop Upload**]を押下すると、エッジAIデバイスに推論停止を指示することができます。 +
-推論が停止すると、エッジAIデバイスから「**Console**」への画像と推論結果のアップロードも停止します。
+[**Stop Upload**]を押下すると、エッジAIデバイスに推論停止を指示できます。 +
+推論が停止すると、エッジAIデバイスからユーザーが指定した接続先への画像と推論結果のアップロードも停止します。
 +
 [NOTE]
 ====
@@ -541,7 +689,7 @@ image::HistoryModeSetting.png[alt="History Modeの表示項目", width="700"]
 スライダーの値を変更した際は、推論元画像の日時のみインデックスに紐づくものに更新される
 
 |[**Sub Directory**]ドロップダウンリスト
-|「**Console**」に格納されている画像のSub Directoryを選択する
+|ユーザーが指定した接続先に格納されている画像のSub Directoryを選択する
 
 |[**Interval Time**]スライダー
 |推論元画像を切り替える時のPlaying間隔を設定する +
@@ -558,13 +706,14 @@ Playing間隔はスライダーの右横に数字で記載する
 . 推論結果の表示を開始する +
 [**Start Playing**]を押下すると、[**Sub Directory**]に格納されている画像と推論結果が画面左側に表示されます。 +
 表示は、[**Image Selection**]で設定したインデックスから[**Interval Time**]の間隔で順次更新されます。 +
+データ取得時間が[**Interval Time**]を超えると、自動で[**Stop Playing**]が実行されます。 +
 . 推論結果の表示を停止する +
 [**Stop Playing**]を押下すると、表示の更新を停止します。 +
 
 [#_SaveData]
 === データを保存する 
 . [**History Mode**]の[**Save Data**]ボタンを押下するとSave Dataメニューが表示されます。 +
-[**Save Data**]ボタンは[**Device Name**]と[**Sub Directory**]を指定することで押下することができます。
+[**Save Data**]ボタンは[**Device Name**]と[**Sub Directory**]を指定することで押下できます。
 +
 image::SaveDialog.png[alt="Save Dataメニューの表示項目", width="600"]
 +
@@ -575,8 +724,8 @@ image::SaveDialog.png[alt="Save Dataメニューの表示項目", width="600"]
 
 |[**Type**]ラジオボタン
 |画像の保存形式を選択できます。 +
-[**Original Image**]に設定すると画像と推論結果を保存することができます。 +
-[**Overlaid Image**]も設定すると画像、推論結果、表示設定を重ね合わせた画像と推論結果を保存することができます。 +
+[**Original Image**]に設定すると画像と推論結果を保存できます。 +
+[**Overlaid Image**]も設定すると画像、推論結果、表示設定を重ね合わせた画像と推論結果を保存できます。 +
 
 |[**Range**]スライダー
 |データを保存する範囲を設定できます。 +
@@ -591,13 +740,13 @@ image::SaveDialog.png[alt="Save Dataメニューの表示項目", width="600"]
 
 
 == 「**Visualization**」カスタマイズ方法
-「**Visualization**」をカスタマイズすることで、自作したAIモデルとWasmを利用した推論結果を可視化することができます。 +
-カスタマイズの手順については、link:CloudSDK_CustomizeGuideline_Visualization_ja.adoc[**「Cloud SDK Visualization カスタマイズガイドライン」**]を参照してください。
+「**Visualization**」をカスタマイズすることで、自作したAIモデルとWasmを利用した推論結果を可視化できます。 +
+カスタマイズの手順は、link:CloudSDK_CustomizeGuideline_Visualization_ja.adoc[**「Cloud SDK Visualization カスタマイズガイドライン」**]を参照してください。
 
 == 制限事項
 *  環境によっては、ラベル名に半角英数字以外を設定すると、画像保存時に文字化けする可能性があります。
 * History ModeやRealtime Modeにおいてサブディレクトリに1000枚を超えるデータが存在する場合、画像の再生順が乱れる可能性があります。
 
 
-=== 「**Visualization**」が対応しているベースAIモデルについて
-サポートしているベースAIモデルはObject Detection, Classification, Semantic Segmentationとなります。
+=== 「**Visualization**」が対応しているAIモデルについて
+サポートしているAIモデルはObject Detection, Classification, Semantic Segmentationとなります。
