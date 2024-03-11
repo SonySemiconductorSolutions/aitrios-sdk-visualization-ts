@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import StopUploadSVG from '../../../common/button/defaultbutton/stopupload-svg'
 
 type RealtimeProps = {
   deviceId: string
+  subDirectory: string
   setDeviceId: (deviceId: string) => void
   deviceIdList: DeviceListData
   setDeviceIdList: (deviceListData: DeviceListData) => void
@@ -98,6 +99,8 @@ export default function Realtime (props: RealtimeProps) {
               uploadHandler({
                 isUploading: props.isUploading,
                 deviceId: props.deviceId,
+                subDirectory: props.subDirectory,
+                isPlaying: props.isPlaying,
                 setIsUploading: props.setIsUploading,
                 setIsLoading: props.setIsLoading,
                 setImagePath: props.setImagePath,

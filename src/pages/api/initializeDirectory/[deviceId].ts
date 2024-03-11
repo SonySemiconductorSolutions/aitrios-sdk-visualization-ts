@@ -68,7 +68,7 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
   }
   try {
     const deviceId: string | undefined = req.query.deviceId?.toString()
-    const subDirectory: string | undefined = req.query.subDirectory?.toString()
+    const subDirectory: string | undefined = req.body.subDirectory?.toString()
 
     if (deviceId === undefined || subDirectory === undefined) {
       throw new Error(JSON.stringify({ message: 'Some parameter is undefined.' }))

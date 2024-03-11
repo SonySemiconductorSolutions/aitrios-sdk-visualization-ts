@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-import { Client, Config } from 'consoleaccesslibrary'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getConsoleSettings } from '../../../common/config'
 import { saveImage, WORK_DIR } from '../../../hooks/fileUtil'
 import * as path from 'path'
+import { getImage } from '../../../hooks/getStorageData'
 
 /**
  * Uses Console to get image data and save it.
@@ -28,20 +27,12 @@ import * as path from 'path'
  * @param numberOfImages The number of image data at one time request.
  * @param skip Start point of image data.
  */
-async function getImage (deviceId: string, subDirectory: string, numberOfImages: number, skip: number) {
-  let calClient
-  const consoleSettings = getConsoleSettings()
+async function getSaveImage (deviceId: string, subDirectory: string, numberOfImages: number, skip: number) {
   try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint,
-      consoleSettings.console_access_settings.portal_authorization_endpoint,
-      consoleSettings.console_access_settings.client_id,
-      consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
-  }
-  const response = await calClient?.insight.getImageData(deviceId, subDirectory, numberOfImages, skip, 'ASC')
-  try {
+    const response = await getImage(deviceId, subDirectory, 'ASC', skip, numberOfImages)
+    if (!response) {
+      throw new Error()
+    }
     const saveDirPath = path.join(WORK_DIR, deviceId, subDirectory)
     response.images.forEach((element: any) => {
       saveImage(element, saveDirPath)
@@ -67,14 +58,14 @@ export default async function handler (req: NextApiRequest, res: NextApiResponse
     return
   }
   const deviceId: string | undefined = req.query.deviceId?.toString()
-  const subDirectory: string | undefined = req.query.subDirectory?.toString()
-  const numberOfImages: number = Number(req.query.endIndex) - Number(req.query.startIndex) + 1
-  const skip: number = Number(req.query.startIndex)
+  const subDirectory: string | undefined = req.body.subDirectory?.toString()
+  const numberOfImages: number = Number(req.body.endIndex) - Number(req.body.startIndex) + 1
+  const skip: number = Number(req.body.startIndex)
 
   if (deviceId === undefined || subDirectory === undefined) {
     throw new Error(JSON.stringify({ message: 'Some parameter is undefined.' }))
   } else {
-    await getImage(deviceId, subDirectory, numberOfImages, skip)
+    await getSaveImage(deviceId, subDirectory, numberOfImages, skip)
       .then(result => {
         res.status(200).json(result)
       }).catch(err => {

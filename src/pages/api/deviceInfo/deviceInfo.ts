@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { Client, Config } from 'consoleaccesslibrary'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getConsoleSettings } from '../../../common/config'
 import { DeviceListData } from '../../../hooks/util'
+import { getConsoleService } from '../../../hooks/getConsoleStorage'
 
 /**
  * Uses Console to retrieve information about a devices.
@@ -25,17 +24,13 @@ import { DeviceListData } from '../../../hooks/util'
  * @returns List about the devices ID.
  */
 const getDeviceInfo = async () => {
-  const consoleSettings = getConsoleSettings()
-  let calClient
-  try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint, consoleSettings.console_access_settings.portal_authorization_endpoint, consoleSettings.console_access_settings.client_id, consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
+  const calClient = await getConsoleService()
+  const response = await calClient.deviceManagement.getDevices()
+  if (typeof response.result !== 'undefined' && response.result === 'ERROR') {
+    throw new Error(JSON.stringify({ message: response.message }))
   }
-  const response = await calClient?.deviceManagement?.getDevices()
-  if (response.status !== 200) {
-    throw new Error(JSON.stringify(response.response.data))
+  if (typeof response.data.result !== 'undefined' && response.data.result === 'WARNING') {
+    throw new Error(JSON.stringify({ message: response.data.message }))
   }
   return response.data
 }

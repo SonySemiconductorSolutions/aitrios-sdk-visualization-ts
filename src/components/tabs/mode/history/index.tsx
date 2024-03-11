@@ -70,7 +70,7 @@ function getSubdirectoryList (props: HistoryProps, setSubDirectoryList: React.Di
       if (res.status === 200) {
         await res.json().then((data) => {
           if (data.length === 0) {
-            return window.alert('DeviceList not found.')
+            return window.alert('Sub Directory not found.')
           }
           setSubDirectoryList(data)
         })
@@ -199,9 +199,7 @@ export default function History (props: HistoryProps) {
             text={!props.isPlaying ? 'Start Playing' : 'Stop Playing'}
             disabled={!props.subDirectory}
             action={() => {
-              if (!props.isPlaying) {
-                props.setLoadingDialogFlg(true)
-              }
+              props.setLoadingDialogFlg(true)
               props.setImageCount(props.displayCount)
               props.setIsPlaying(!props.isPlaying)
             }

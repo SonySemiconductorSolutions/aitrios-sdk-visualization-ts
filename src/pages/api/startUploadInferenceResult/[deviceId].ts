@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { Client, Config } from 'consoleaccesslibrary'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getConsoleSettings } from '../../../common/config'
-
+import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
+import { format } from 'date-fns'
+import { utcToZonedTime } from 'date-fns-tz'
+import { getConsoleService } from '../../../hooks/getConsoleStorage'
 /**
  * Uses Console to request that a get Mode and UploadMethodIR in command parameter files
  *
@@ -25,23 +26,26 @@ import { getConsoleSettings } from '../../../common/config'
  * @returns an object containing information on whether or not the operation succeeded. Ex: { "Mode": "1", "UploadMethodIR": "Mqtt"}
  */
 const getCommandParameterFile = async (deviceId: string) => {
-  const consoleSettings = getConsoleSettings()
-  let calClient
-  try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint, consoleSettings.console_access_settings.portal_authorization_endpoint, consoleSettings.console_access_settings.client_id, consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
+  const calClient = await getConsoleService()
+  const response = await calClient.deviceManagement.getCommandParameterFile()
+  if (typeof response.result !== 'undefined' && response.result === 'ERROR') {
+    throw new Error(JSON.stringify({ message: response.message }))
   }
-  const response = await calClient?.deviceManagement?.getCommandParameterFile()
-  if (response.status !== 200) {
-    throw new Error(JSON.stringify(response.response.data))
+  if (typeof response.data.result !== 'undefined' && response.data.result === 'WARNING') {
+    throw new Error(JSON.stringify({ message: response.data.message }))
   }
+
   const matchData = response.data.parameter_list.filter(function (value: any) {
     return value.device_ids.indexOf(deviceId) !== -1
   })
   const mode = 'Mode' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.Mode : 0
   const uploadMethodIR = 'UploadMethodIR' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.UploadMethodIR : 'MQTT'
+
+  if (!((uploadMethodIR === 'MQTT' && CONNECTION_DESTINATION === SERVICE.Console) ||
+      (uploadMethodIR === 'BlobStorage' && CONNECTION_DESTINATION === SERVICE.Azure) ||
+      (uploadMethodIR === 'HTTPStorage' && CONNECTION_DESTINATION === SERVICE.Local))) {
+    throw new Error(JSON.stringify({ message: 'Command parameters and CONNECTION_DESTINATION do not match.' }))
+  }
 
   const result = { mode, uploadMethodIR }
   return result
@@ -56,24 +60,28 @@ const getCommandParameterFile = async (deviceId: string) => {
 const startUploadInferenceResult = async (deviceId: string) => {
   const parameter = await getCommandParameterFile(deviceId)
 
-  if (parameter.mode !== 1 || parameter.uploadMethodIR.toUpperCase() !== 'MQTT') {
+  if (parameter.mode !== 1) {
     throw new Error(JSON.stringify({ message: 'Unexpected parameter in Command Parameter File.' }))
   }
 
-  const consoleSettings = getConsoleSettings()
-  let calClient
-  try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint, consoleSettings.console_access_settings.portal_authorization_endpoint, consoleSettings.console_access_settings.client_id, consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
-  }
-  const res = await calClient?.deviceManagement?.startUploadInferenceResult(deviceId)
-  if (res.status !== 200) {
-    throw new Error(JSON.stringify(res.response.data))
-  }
+  const calClient = await getConsoleService()
 
-  return res.data
+  const res = await calClient.deviceManagement.startUploadInferenceResult(deviceId)
+  if (typeof res.result !== 'undefined' && (res.result === 'ERROR')) {
+    throw new Error(JSON.stringify({ message: res.message }))
+  }
+  if (typeof res.data.result !== 'undefined' && res.data.result === 'WARNING') {
+    throw new Error(JSON.stringify({ message: res.data.message }))
+  }
+  const response = res.data
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && response.result === 'SUCCESS') {
+    const currentDate = new Date()
+    const utcDate = utcToZonedTime(currentDate, 'UTC')
+    const dateFormat = 'yyyyMMddHHmmssSSS'
+    const outputSubDirectory = format(utcDate, dateFormat)
+    response.outputSubDirectory = `local/deviceId/image/${outputSubDirectory}`
+  }
+  return response
 }
 
 /**
@@ -85,7 +93,7 @@ const startUploadInferenceResult = async (deviceId: string) => {
  * @param res Response
  * result: execution result
  * outputSubDirectory: storage path for acquired images
- *
+ * outputSubDirectoryIR: input inference result storage path, UploadMethodIR:BlobStorage only
  */
 export default async function handler (req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
