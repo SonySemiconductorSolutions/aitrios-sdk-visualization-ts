@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,32 +14,20 @@
  * limitations under the License.
  */
 
-import { Client, Config } from 'consoleaccesslibrary'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getConsoleSettings } from '../../../common/config'
+import { getImage } from '../../../hooks/getStorageData'
 
 /**
  * Uses Console to get number of files in subdirectories
  *
  * @param deviceId The id of the device to get uploading image data.
- *
+ * @param subDirectory The Subdirectory where the acquired inferred source images are stored.
  * @returns Number of images in subdirectories Ex: 20
  */
 const totalImageCount = async (deviceId: string, subDirectory: string) => {
-  const consoleSettings = getConsoleSettings()
-  let calClient
-  try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint, consoleSettings.console_access_settings.portal_authorization_endpoint, consoleSettings.console_access_settings.client_id, consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
-  }
   const numberOfImages = 1
-  const response = await calClient?.insight.getImages(deviceId, subDirectory, numberOfImages)
-  if (response.status !== 200) {
-    throw new Error(JSON.stringify(response.response.data))
-  }
-  return response.data.total_image_count
+  const result = await getImage(deviceId, subDirectory, undefined, undefined, numberOfImages)
+  return result?.total_image_count
 }
 
 /**

@@ -21,7 +21,7 @@
 |2022/11/16
 |Initial draft
 
-|2023/1/30
+|2023/01/30
 |Updated UI +
 Added support for classification AI task +
 Updated the PDF build environment
@@ -43,6 +43,9 @@ Fixed alternate text to images
 |2023/06/20
 |Added that the playback order is disturbed by the number of images
 
+|2023/12/22
+|Supported Console Developer Edition and Console Enterprise Edition
+
 |===
 
 
@@ -61,13 +64,23 @@ Uses Next.js as the application framework.
 |"**Console for AITRIOS**" (Hereafter referred to as "**Console**")
 |A cloud service that provides various functions (Deployment, Retraining, Edge AI Device Management etc.) to efficiently implement solutions from edge to cloud
 
-|Same as return value name
-|AI-processed metadata among outputs from "**Vision and Sensing Applications**"
+|Inference result
+|AI-processed metadata among outputs from "**Edge Applications**"
 
 |Image
-|Image data captured by edge AI devices among outputs from "**Vision and Sensing Applications**"
-|===
+|Image data captured by edge AI devices among outputs from "**Edge Applications**"
 
+|Azure Blob Storage
+|Object storage provided by Microsoft Corporation
+
+|Local Storage
+|Device storage on which the user runs the sample application
+
+|Local HTTP Server
+|Server launched when saving the data output by EdgeAI device to Local Storage
+
+|===
+NOTE: "**Edge Applications**" and "**Vision and Sensing Application**" mean the same thing.
 
 == Reference materials
 * "**Console Access Library**" for TypeScript used by "**Visualization**"
@@ -108,9 +121,14 @@ Uses Next.js as the application framework.
 *** You can select and save the data you want to save from the Save Data menu.
 
 * It can be run on Codespaces.
-* The base AI model supports Object Detection, Classification and Segmentation.
+* The AI model supports Object Detection, Classification and Segmentation.
 
 === Algorithm
+. Add the following to "CONNECTION_DESTINATION" in src/common/settings.ts
+..  Below setting values can be set in CONNECTION_DESTINATION.
+** SERVICE.Console
+** SERVICE.Azure
+** SERVICE.Local
 . Launch the screen.
 .. The main screen appears.
 . getDeviceInfo is called to get the Device Name list of edge AI devices registered in the "**Console**".
@@ -119,17 +137,26 @@ Uses Next.js as the application framework.
 .. Only label file data is gotten during label import. (The label file itself is not included.)
 . Open the Display Setting menu and set display setting on the AI task tab
 
-. Realtime Mode
+. In case of Realtime Mode
 .. Select the Device Name of the edge AI device from the Device Name drop-down list and press Start Upload.
 .. startUploadInferenceResult is called to start uploading inference source images and inference results.
 .. Set the Polling Interval and press the Start Polling button.
 .. getImage and getInference are called periodically to get and display the latest inference source image and inference results.
+* The extraction layer that determines the Clous service or SDK to be used determines the location for fetching the data based on the connection information available in src/common or the CONNECTION_DESTINATION settings of src/common/settings.ts.
+... When "SERVICE.Console" is set, it fetches data from the "**Console**".
+... When set to "SERVICE.Azure", it fetches data from Azure Blob Storage.
+... When set to "SERVICE.Local", it fetches the data from the path set in "LOCAL_ROOT" of src/common/settings.ts.
+* In case of any error in specifying the connection information or connection destination, it throws an error while fetching the data.
 * If the selected AI task is a classification, a list of inference results is also displayed.
-.. When the Stop Upload button is pressed, stopUploadInferenceResult is called to stop uploading inference source images and inference results.
 .. Press the Stop Polling button to stop getting and displaying the latest inference source image and inference results.
+* When connection destination is local, change the file structure of the data saved by Local HTTP Server by using the deviceId and subDirectory. + 
+For the changed file structure, refer the limitations section.
+.. Press the Stop Polling button to stop getting and displaying the latest inference source image and inference results.
+* When the data acquisition does not fit into the Polling Interval, the timeout processing is performed
+and the acquisition, display of the pre-inference image and the inference result are stopped.
 * If the selected AI task is a classification, the list of inference results is also stopped.
 
-. History Mode
+. In case of History Mode
 .. Select the Device Name of the edge AI device from the Device Name drop-down list.
 .. getSubDirectoryList is called to get a list of subdirectories where the inference source images are stored.
 .. The list of gotten subdirectories is set in a drop-down list.
@@ -137,8 +164,15 @@ Uses Next.js as the application framework.
 .. getTotalImageCount is called to get the number of inference source images stored in the selected subdirectory.
 .. Set the Image Selection/Interval Time and press Start Playing.
 .. getImage and getInference are called periodically to get and display the entire number of inference source images and their inference results, one by one, stored in the subdirectory.
+* The extraction layer that determines the Clous service or SDK to be used determines the location for fetching the data based on the connection information available in src/common or the CONNECTION_DESTINATION settings of src/common/settings.ts.
+... When "SERVICE.Console" is set, it fetches data from the "**Console**".
+... When set to "SERVICE.Azure", it fetches data from Azure Blob Storage.
+... When set to "SERVICE.Local", it fetches the data from the path set in "LOCAL_ROOT" of src/common/settings.ts
 * After getting and displaying the last inference source image and inference result of the subdirectory, start again with the first one.
 * If the selected AI task is a classification, a list of inference results is also displayed.
+* When the data acquisition does not fit into the Interval Time, the timeout processing is
+performed and the acquisition, display of the pre-inference image and the inference result
+are stopped.
 .. Pressing the Stop Playing button stops getting and displaying inference source images and inference results.
 * If the selected AI task is a classification, the list of inference results is also stopped.
 .. Press the Save Data button to open the Save Data menu.
@@ -186,8 +220,22 @@ createOverlaidImage is called to create and save images by overlaying inference 
 
 === Under what condition
 * Have access to the "**Console**".
+* When using either the "**Console**" or Cloud service, prepare the respective connection information.
+** When using "**Console**", console_access_settings.yaml is available in src/common and the required connection information should be set.
+** When using cloud service other than "**Console**", [Service name]_access_settings.yaml is available in src/common and the required connection information should be set.
+*** Example
+
+    azure_access_settings.yaml
+
+** When using Local storage, the root of the browsing directory should be mentioned in the "LOCAL_ROOT" of src/common/settings.ts.
+
+*** Example
+
+    export const LOCAL_ROOT = 'C:\\any_place\\...'
+
+*** LOCAL_ROOT can only be specified as an absolute path.
 * A development environment with Node.js has been built.
-** Version of Node.js is v16.
+** Version of Node.js is v18.
 * A TypeScript development environment has been built.
 ** TypeScript version is 4.7.
 ** Required if you want to run it as is.
@@ -330,19 +378,19 @@ image::./ScreenSpec_Visualization_Segmentation.png[alt="Segmentation tab", width
 image::./ScreenSpec_Visualization_RealtimeMode.png[alt="Realtime Mode tab", width="700"]
 
 . Device Name drop-down list
-** Selects the Device Name of the edge AI device registered in the "**Console**"
+** Selects the Device Name of the edge AI device registered in the destination connection location specified by the user.
 +
 If a string is set that exceeds the length of the Device Name text box, the excess is omitted to "..."
 . Reload button
 ** Updates the Device Name list in the Device Name drop-down list to the Device Name list of the latest Edge AI device registered in "**Console**"
 ** After reload, the Device Name drop-down list is left with no Device Name selected
 . Polling Interval slider
-** Sets the polling interval when getting data from the "**Console**"
+** Slider used to set the polling interval when fetching data from the destination connection location specified by the user.
 ** The polling interval is displayed numerically to the right of the slider
 . Start Upload/Stop Upload button
 ** Starts/Stops uploading images and inference results
 . Start Polling/Stop Polling button
-** Starts/Stops getting and displaying the latest image and inference results from the "**Console**"
+** Starts/Stops getting and displaying the latest image and inference results from the destination connection location specified by the user.
 
 
 ==== History Mode tab
@@ -354,7 +402,7 @@ image::./ScreenSpec_Visualization_HistoryMode.png[alt="History Mode tab", width=
 ** Updates the Device Name list in the Device Name drop-down list to the Device Name list of the latest Edge AI device registered in "**Console**"
 ** After reload, the Device Name drop-down list is left with no Device Name selected
 . Sub Directory drop-down list
-** Selects the subdirectory of images stored in the "**Console**"
+** Selects the subdirectory of images stored in the destination connection location specified by the user.
 . Image Selection slider
 ** Sets the index of the inference source image to start displaying
 ** The index is displayed numerically to the right of the slider
@@ -447,6 +495,16 @@ image::./ScreenSpec_Visualization_Saving.png["Saving dialog"]
 ==== Operations until launching "**Visualization**"
 * Use "**Visualization**" in a Docker container
 . Developers open the "**Visualization**" repository from any browser and clone the repository.
+. In src/common, place the setting file containing the connection information.
+. Mention the connection destination information in the "CONNECTION_DESTINATION" of src/common/settings.ts.
+** Either of console/azure/local can be set in "CONNECTION_DESTINATION".
+.. When "SERVICE.Console" is set, it fetches data from the "**Console**".
+.. When set to "SERVICE.Azure", it fetches data from Azure Blob Storage.
+.. When set to "SERVICE.Local", it fetches the data from the path set in "LOCAL_ROOT" of src/common/settings.ts.
+** When the configuration file of the connection destination that is set in 
+"CONNECTION_DESTINATION" does not exist in src/common or if the required 
+authentication information is not described in the confiuration file, an error dialog is displayed 
+when obtaining the pre-inference image/inference results.
 . Create a "**Visualization**" Docker image by executing the following command on a Dockerfile directly under the repository root directory:
 +
 ....
@@ -466,10 +524,21 @@ docker run -p 3000:3000 -d visualization-app
 ....
 npm install
 ....
+. In src/common, place the setting file containing the connection information.
+. Mention the connection destination information in the "CONNECTION_DESTINATION" of src/common/settings.ts.
+** Either of console/azure/local can be set in "CONNECTION_DESTINATION".
+.. When "SERVICE.Console" is set, it fetches data from the "**Console**".
+.. When set to "SERVICE.Azure", it fetches data from Azure Blob Storage.
+.. When set to "SERVICE.Local", it fetches the data from the path set in "LOCAL_ROOT" of src/common/settings.ts.
+** When the configuration file of the connection destination that is set in 
+"CONNECTION_DESTINATION" does not exist in src/common or if the required 
+authentication information is not described in the confiuration file, an error dialog is displayed 
+when obtaining the pre-inference image/inference results.
 . Run the following command in the terminal to launch "**Visualization**":
 +
 ....
-npm run dev
+npm run build
+npm run start
 ....
 
 ==== Operations after launch "**Visualization**"
@@ -538,8 +607,8 @@ Pressing the [**Stop Upload**] button during polling stops both uploading and po
 ** Enter a save filename to the "Save File As" dialog, specify any directory, and press the "Save" button.
 
 
-=== API parameters in each block
-==== GET
+== API parameters
+=== GET
 
 * getImage + 
 URL：{base_url}/api/image/{deviceId}?{imagePath}&{numberOfImages}&{skip}&{orderBy}
@@ -553,7 +622,7 @@ URL：{base_url}/api/image/{deviceId}?{imagePath}&{numberOfImages}&{skip}&{order
 |Not specified
 
 |imagePath
-|Path on the cloud storage of the inference source image you want to get
+|Path to the storage containing the pre-inference image(s) to be fetched
 |Not specified
 
 |numberOfImages
@@ -693,7 +762,7 @@ URL : {base_url}/api/getZipData
 |===
 
 
-==== POST
+=== POST
 * startUploadInferenceResult + 
 URL : {base_url}/api/startUploadInferenceResult/{deviceId}
 ** Instructs the Device ID corresponding to the Device Name of the selected edge AI device to start uploading inference source images and inference results.
@@ -721,12 +790,21 @@ URL : {base_url}/api/startUploadInferenceResult/{deviceId}
 * stopUploadInferenceResult + 
 URL : {base_url}/api/stopUploadInferenceResult/{deviceId}
 ** Instructs the Device ID corresponding to the Device Name of the selected edge AI device to stop uploading images and inference results.
+** In case the destination location is local, revise it to a Local Storage file structure.
 
 |===
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
 |Device ID of the edge AI device to stop uploading inference source images and inference results
+|Not specified
+|===
+
+|===
+|Request Body's name|Meaning|Range of parameter
+
+|subDirectory
+|Path storing the image or inference results
 |Not specified
 |===
 
@@ -747,6 +825,10 @@ URL : {base_url}/api/initializeDirectory/{deviceId}?{subDirectory}
 |deviceId
 |Device ID of the edge AI device uploading inference source images
 |Not specified
+|===
+
+|===
+|Request Body's name|Meaning|Range of parameter
 
 |subDirectory
 |Subdirectory where data is stored
@@ -771,6 +853,11 @@ URL : {base_url}/api/saveImage/{deviceId}?{subDirectory}?{startIndex}?{endIndex}
 |deviceId
 |Device ID of the edge AI device uploading inference source images
 |Not specified
+
+|===
+
+|===
+|Request Body's name|Meaning|Range of parameter
 
 |subDirectory
 |Subdirectory where data is stored
@@ -803,6 +890,11 @@ URL : {base_url}/api/saveInferences/{deviceId}?{subDirectory}?{aiTask}
 |deviceId
 |Device ID of the edge AI device uploading inference source images
 |Not specified
+
+|===
+
+|===
+|Request Body's name|Meaning|Range of parameter
 
 |subDirectory
 |Subdirectory where data is stored
@@ -947,11 +1039,53 @@ URL : {base_url}/api/createOverlaidImage/{deviceId} +
 
 * From the "**Console**" UI, set command parameter file to the following setting:
 ** Mode=1(Image&Inference Result)
-** UploadMethodIR="Mqtt"
 ** Other parameters need to be changed depending on the AI model and application content.
 * If you select an edge AI device that does not have an AI model or application deployed at runtime, it will not work properly.
 * If you select an AI task that differs from the output data of the AI model, it may result in an error or incorrect data.
 * If there are more than 1000 images in a subdirectory in History Mode or Realtime Mode, the playback order of the images may be disturbed.
+* From the "**Console**" UI, set the Command Parameter File to the following setting:
+** Mode=1(Image&Inference Result)
+** FileFormat="JPG"
+** NumberOfInferencesPerMessage=1
+** Other parameters need to be changed depending on the AI model and application content
+* Object detection is deployed as the AI model.
+* The file structure when Local HTTP Server saves data in Local Storage is as follows.
+
+    image
+    meta
+    Device ID
+        ∟image
+            ∟yyyyMMddHHmmssfff (1)
+                ∟yyyyMMddHHmmssfff.jpg (2)
+                ∟yyyyMMddHHmmssfff.jpg (2)
+        ∟meta
+            ∟yyyyMMddHHmmssfff (1)
+                ∟yyyyMMddHHmmssfff.txt (3)
+                ∟yyyyMMddHHmmssfff.txt (3)
+    
+    (1) Inference start time
+    (2) Pre-inference image file (file name is the pre-inference image output time)
+    (3) Inference results file (file name is the inference results output time)
+
+* Consider data file structure when using Azure Blob Storage.
+
+    Device ID
+        ∟image
+            ∟yyyyMMddHHmmssfff (1)
+                ∟yyyyMMddHHmmssfff.jpg (2)
+                ∟yyyyMMddHHmmssfff.jpg (2)
+        ∟metadata
+            ∟yyyyMMddHHmmssfff (1)
+                ∟yyyyMMddHHmmssfff.txt (3)
+                ∟yyyyMMddHHmmssfff.txt (3)
+
+    (1) Inference start time
+    (2) Pre-inference image file(file name is the pre-inference image output time)
+    (3) Inference results file (file name is the inference results output time)
+
+* In case of an error when clicking [Stop Upload] button while using Local Storage, do not execute the process of transferring images and inference results. +
+Also on clicking [Start Upload] button in this state, the data uploaded just before and the data to be fetched next are mixed up, the following support is required.
+** Either transfer or delete the images, inference results available in LOCAL_ROOT.
 
 == Remarks
 * Image uploads from edge AI devices to the "**Console**" can experience delays of up to several minutes.

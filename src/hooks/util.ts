@@ -62,6 +62,8 @@ export type labelProps = {
 type UploadHandlerProps = {
   isUploading: boolean
   deviceId: string
+  subDirectory: string
+  isPlaying: boolean
   setIsUploading: (isUploading: boolean) => void
   setIsLoading: (isLoading: boolean) => void
   setImagePath: (imagePath: string) => void
@@ -80,6 +82,7 @@ export type PollingHandlerProps = {
   setImageCount: (imageCount: number) => void
   setIsFirst: (isFirst: boolean) => void
   setLoadingDialogFlg: (display: boolean) => void
+  setIsPlaying: (isPlaying: boolean) => void
 }
 
 export type PollingData = {
@@ -417,7 +420,7 @@ export const delLineClickEvent = (props: SegmentationProps, delNumber: number | 
   setDelNumber(0)
 }
 
-export const pollingHandler = async (props: PollingHandlerProps): Promise<PollingData> => {
+export const pollingHandler = async (props: PollingHandlerProps, intervalTimeValue: number, abortContoroller: AbortController): Promise<PollingData> => {
   const pollingData: PollingData = {
     image: '',
     timeStamp: '',
@@ -426,7 +429,6 @@ export const pollingHandler = async (props: PollingHandlerProps): Promise<Pollin
     inferenceSeg: '',
     imageCount: 0
   }
-
   try {
     let nextImageCount = 0
     if (props.mode === HISTORY_MODE) {
@@ -444,35 +446,50 @@ export const pollingHandler = async (props: PollingHandlerProps): Promise<Pollin
     const numberOfImages = 1
     const skip = nextImageCount
     const orderBy = props.mode === REALTIME_MODE ? 'DESC' : 'ASC'
+    const signal = abortContoroller.signal
+    const delay = 5
+    const setTimeoutId = setTimeout(() => {
+      props.setIsPlaying(false)
+      abortContoroller.abort('TIMEOUT')
+    }, (intervalTimeValue * 1000) - delay)
 
-    const url = `/api/image/${props.deviceId}?imagePath=${props.imagePath}&numberOfImages=${numberOfImages}&skip=${skip}&orderBy=${orderBy}`
-    const image = await fetch(url, { method: 'GET' })
-
+    const mode = props.mode
+    const url = `/api/image/${props.deviceId}?imagePath=${props.imagePath}&numberOfImages=${numberOfImages}&skip=${skip}&orderBy=${orderBy}&mode=${mode}`
+    const image = await fetch(url, { method: 'GET', signal })
     if (image.status === 200) {
       const imageData = await image.json()
       const { timestamp } = imageData
       pollingData.image = `data:image/jpg;base64,${imageData.buff}`
       pollingData.timeStamp = timestamp
 
-      const inference = await fetch(`/api/inference/${props.deviceId}?timestamp=${timestamp}&aiTask=${props.aiTask}`, { method: 'GET' })
+      const inference = await fetch(`/api/inference/${props.deviceId}?subDirectory=${props.imagePath}&timestamp=${timestamp}&aiTask=${props.aiTask}&mode=${mode}`, { method: 'GET', signal })
       if (inference.status === 200) {
         const inferenceData = await inference.json()
-        pollingData.inferenceRawData = inferenceData.inferencesList
+        pollingData.inferenceRawData = inferenceData.deserializedRawData
         if (props.aiTask === SEGMENTATION) {
           pollingData.inferenceSeg = inferenceData.inferencesList.inference_result.Inferences[0]
         } else {
           pollingData.inference = inferenceData.inferencesList.inference_result.Inferences[0].O[0]
         }
       } else {
-        const errorMessage: ErrorData = await inference.json()
+        const errorMessage = await inference.json()
         handleResponseErr(errorMessage)
       }
     } else {
-      const errorMessage: ErrorData = await image.json()
+      const errorMessage = await image.json()
       handleResponseErr(errorMessage)
     }
+    clearTimeout(setTimeoutId)
   } catch (e) {
-    handleResponseErr({ message: 'An error has occurred.' })
+    if (e instanceof DOMException) {
+      if (abortContoroller.signal.reason === 'TIMEOUT' && props.mode === REALTIME_MODE) {
+        handleResponseErr({ message: 'Communication timed out.\nPolling has stopped, but uploading continues.\nThe following may resolve the problem.\n1. Extend the Polling Interval.' })
+      } else if (abortContoroller.signal.reason === 'TIMEOUT' && props.mode === HISTORY_MODE) {
+        handleResponseErr({ message: 'Communication timed out.\nThe following may resolve the problem.\n1. Extend the Polling Interval.\n2. Delete images in subDirectories.' })
+      }
+    } else {
+      handleResponseErr({ message: 'An error has occurred.' })
+    }
     props.setLoadingDialogFlg(false)
   }
   return pollingData
@@ -506,6 +523,7 @@ export const setData = async (props: setDataProps) => {
 
     props.setLoadingDialogFlg(false)
   } catch (e) {
+    console.log(e)
     handleResponseErr({ message: 'An error has occurred.' })
     props.setLoadingDialogFlg(false)
   }
@@ -575,7 +593,15 @@ export const convertInferencesSEG = (inferenceResults: SegInferenceProps, index:
 
 export const handleResponseErr = (err: ErrorData) => {
   console.error(err)
-  alert(err.message)
+  let parseErrObj
+  if (err.message) {
+    alert(err.message)
+  } else if (typeof err === 'string') {
+    parseErrObj = JSON.parse(err)
+    if (parseErrObj.message) {
+      alert(parseErrObj.message)
+    }
+  }
 }
 
 const startUpload = async (props: UploadHandlerProps) => {
@@ -601,12 +627,21 @@ const startUpload = async (props: UploadHandlerProps) => {
 
 const stopUpload = async (props: UploadHandlerProps) => {
   try {
-    const stopUploadResponse = await fetch(`/api/stopUploadInferenceResult/${props.deviceId}`, { method: 'POST' })
+    const body = {
+      subDirectory: props.subDirectory
+    }
+    const stopUploadResponse = await fetch(`/api/stopUploadInferenceResult/${props.deviceId}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body)
+    })
     if (stopUploadResponse.status === 200) {
       props.setIsUploading(false)
       props.setIsPlaying(false)
       props.setImagePath('')
     } else {
+      props.setIsUploading(props.isUploading)
+      props.setIsPlaying(props.isPlaying)
       const errorMessage: ErrorData = await stopUploadResponse.json()
       handleResponseErr(errorMessage)
     }

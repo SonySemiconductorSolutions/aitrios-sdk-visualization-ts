@@ -21,22 +21,31 @@
 |2023/7/5
 |Initial draft
 
+|2023/9/11
+|Added a method to revise when adding properties
+
 |===
 
 == Introduction
 This book describes how to customize "**Visualization**" if you want to visualize inference results using your own AITask and Wasm. + 
 See this book after you have identified the format from the three AITasks: Object Detection, Classification, and Segmentation. + 
+Customization supports only assignment of unique name property and addition of property. +
 If you want to see how the inference results are visualized for each AITask, see link:CloudSDK_FuncSpec_Visualization.adoc[**"Cloud SDK Visualization Functional Specifications"**].
 
-== Flow of deserialization in "**Visualization**"
-1. `**src/hooks/deserialize/deserializeFunction.ts**` identifies the selected AITask and invokes the process in 2 to deserialize the received data.
+== Flow from deserialization of "**Visualization**" to data display
+1. src/hooks/deserialize/deserializeFunction.ts identifies the selected AITask and invokes the 
+process in 2 to deserialize the received data.
 
-2. The following file, which is in the same hierarchy as `**src/hooks/deserialize/deserializeFunction.ts**` deserializes using auto-generated code based on the FBS file.
+2. The following file, which is in the same hierarchy as src/hooks/deserialize/deserializeFunction.ts 
+deserializes using auto-generated code based on the FBS file
 - `**src/hooks/deserialize/deserializeObjectDetection.ts**`
 - `**src/hooks/deserialize/deserializeClassification.ts**`
 - `**src/hooks/deserialize/deserializeSegmentation.ts**`
 
-3. The deserialized data is used on the "**Visualization**" screen.
+3. The deserialized data is formatted within the convertInferencesOD and convertInferencesCls 
+functions of src/hooks/util.ts
+
+4. The formatted data is passed to each component and displayed on the screen.
 
 == Procedure and details of the change
 [#_CodeUpdate]
@@ -51,13 +60,13 @@ See link:https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserializati
 |AITask |File path 
 
 |Object Detection
-|`**src/hooks/deserialize/objectdetection/...**`
+|`**src/hooks/deserialize/objectdetection/…**`
 
 |Classification
-|`**src/hooks/deserialize/classification/...**`
+|`**src/hooks/deserialize/classification/…**`
 
 |Segmentation
-|`**src/hooks/deserialize/segmentation/...**`
+|`**src/hooks/deserialize/segmentation/…**`
 
 |===
 
@@ -65,6 +74,9 @@ See link:https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserializati
 - The following table lists the files that will be modified in the subsequent procedures:
 +
 .Files to be modified for each AITask
++
+When assigning a unique name property
++
 |===
 |AITask |File path 
 
@@ -78,53 +90,90 @@ See link:https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserializati
 |`**src/hooks/deserialize/deserializeSegmentation.ts**`
 
 |===
-
-==== Modify the file to import
-
-1. Modify the file that invoke auto-generated code.
-
-- Object Detection
 +
-Modify line 2~4 of the following code at the top of the file to refer to the auto-generated code.
-[source, typescript]
+When adding the property
 +
+|===
+|AITask |File path 
+
+|Object Detection
+|`**src/hooks/deserialize/deserializeObjectDetection.ts**` +
+`**src/hooks/util.ts**` +
+`**src/components/common/boundingboxes/index.tsx**`
+
+|Classification
+|`**src/hooks/deserialize/deserializeClassification.ts**` +
+`**src/hooks/util.ts**` +
+`**src/components/tabs/aiTask/classification/index.tsx**`
+
+|Segmentation
+|`**src/hooks/deserialize/deserializeSegmentation.ts**` +
+`**src/hooks/util.ts**` +
+`**src/components/tabs/aiTask/segmentation/index.tsx**`
+
+|===
+
+==== Modify the path of the module to be imported.
+
+1. Modify the path of the module
+
+- Revised areas for Object Detection
++
+Modify the lines 2 to 4 of the following code at the top of the file so that it refers to the file 
+placed in "Create and place the auto-generated code".
++
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
 ----
 import * as flatbuffers from 'flatbuffers'
 import { ObjectDetectionTop } from './objectdetection/object-detection-top'
 import { BoundingBox } from './objectdetection/bounding-box'
 import { BoundingBox2d } from './objectdetection/bounding-box2d'
 ----
+|===
 
-
-- Classification
+- Modified part of Classification
 +
-Modify line 2 of the following code at the top of the file to refer to the auto-generated code.
-[source, typescript]
+Modify the second line of the following code at the top of the file so that it refers to the auto-generated code
 +
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
 ----
 import * as flatbuffers from 'flatbuffers'
 import { ClassificationTop } from './classification/classification-top'
 ----
+|===
 
-- Segmentation
+- Modified parts of Segmentation
 +
-Modify line 2~3 of the following code at the top of the file to refer to the auto-generated code.
-[source, typescript]
+Modify the 2nd to 3rd lines of the following code at the top of the file so that it refers to the auto-generated code.
 +
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
 ----
 import * as flatbuffers from 'flatbuffers'
 import { SemanticSegmentationTop } from './segmentation/semantic-segmentation-top'
 import { SemanticSegmentationData } from './segmentation/semantic-segmentation-data'
 ----
+|===
 
-==== Modify the object declaration
-1. Use the following property descriptions to assign appropriate values.
+==== When assigning a unique name property
+1. Substitute an appropriate value by referring to the property description described below.
 +
 IMPORTANT: Renaming a property will cause an error and not work properly.
 
-- Object Detection
+- Modified part of Object Detection
 +
-[source, typescript]
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
 ----
 res = {
   class_id: Number(objList.classId()),
@@ -135,62 +184,70 @@ res = {
   bottom: Number(bbox2d.bottom())
 }
 ----
+|===
 +
 |===
-|Property |Description
+|Property name |Description
 
 |class_id
-|A number indicating the inferred class ID. +
-It is used to associate with the label set on the screen and display the label on the image.
+|Numerical value that indicates the inferred class ID. +
+It is associated with the label set on the screen and is used to display the label name on the image.
 
 |score
-|A number indicating the inference probability. +
-When the inference result is drawn on the image, it is displayed in % as the inference probability.
+|It is a numerical value that indicates the inference accuracy. +
+When drawing the inference results on the image, consider the inference accuracy It is displayed in % notation
 
 |left
-|A number indicating the coordinates of the left of the bounding box. +
-It is used to overlay inference results on images.
+|Numerical value that indicates the coordinates of the left side of the Bounding box. +
+It is used to superimpose the inference result on the image.
 
 |top
-|A number indicating the coordinates of the top of the bounding box. +
-It is used to overlay inference results on images.
+|Numerical value that indicates the coordinates of the upper edge of the Bounding box. +
+It is used to superimpose the inference result on the image.
 
 |right
-|A number indicating the coordinates of the right of the bounding box. +
-It is used to overlay inference results on images.
+|Numerical value that indicates the coordinate of the right side of the Bounding box. +
+It is used to superimpose the inference result on the image.
 
 |bottom
-|A number indicating the coordinates of the bottom of the bounding box. +
-It is used to overlay inference results on images.
+|Numerical value that indicates the coordinates of the bottom side of the Bounding box.
+It is used to superimpose the inference result on the image.
 
 |===
 
-- Classification
+- Modified part of Classification
 +
-[source, typescript]
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
 ----
 res = {
   class_id: Number(clsList.classId()),
   score
 }
 ----
+|===
 +
 |===
-|Property |Description
+|Property name |Description
 
 |class_id
-|A number indicating the inferred class ID. +
-It is used to associate with the label set on the screen and display the label in the list on the right side of the image display area.
+|Numerical value that indicates the inferred class ID. +
+To associate the label set on the screen and display the label name in the list to the right of the image display area.
 
 |score
-|A number indicating the inference probability. +
-In the list on the right side of the image display area, it is displayed in % as the inference probability along with the label. 
+|It is a numerical value that indicates the inference accuracy. +
+It is displayed together with the label name in the list to the right of the image display area as an inference accuracy in % notation.
 
 |===
 
-- Segmentation
+- Modified parts of Segmentation
 +
-[source, typescript]
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
 ----
 const deserializedSegmentationData: Inference = {
   height: Number(readsegData.height()),
@@ -200,28 +257,370 @@ const deserializedSegmentationData: Inference = {
   scoreMap
 }
 ----
+|===
 +
 |===
-|Property |Description 
+|Property name |Description
 
 |height
-|A number indicating the height of overlaid images. +
-It is used to generate overlaid images.
+|It is a numerical value that indicates the height of the superimposed image. +
+It is used when generating superimposed images.
 
 |width
-|A number indicating the width of overlaid images. +
-It is used to generate overlaid images.
+|Numerical value that indicates the width of the superimposed image. +
+It is used when generating superimposed images.
+
 
 |classIdMap
-|Numeric array indicating inferred `**class_id**` per pixel. +
-After the overlaid image is generated, it is used as an object identification to add color according to the label settings on the screen.
+|It is a numeric array that indicates the inferred `**class_id**` for each pixel. +
+It is used as target identification when adding color in the label setting on the screen after generating the superimposed image.
 
 |numClassId
-|A number indicating how many `**class_id**` are candidates for inference results. +
-When coloring overlaid images, if `**numClassId**` is greater than or equal to 2, there are multiple inference results per pixel. In this case, checks the `**scoreMap**` by `**numClassId**` and color the one with higher inference probability.
+|It is a numerical value that indicates the number of `**class_id`**(s) that are candidates for inference results. +
+When coloring superimposed images, if `**numClassId**` is 2 or more, there are multiple inference results per pixel. +
+In that case, check the `**scoreMap**` for `**numClassIds**` and color the one with the higher inference accuracy first.
 
 |scoreMap
-|Numeric array indicating inference probability per pixel. +
-After the overlaid image is generated, it is used to add color according to the label settings on the screen.
+|It is a numerical array that indicates the inference accuracy for each pixel. +
+It is used to color the label settings on the screen after generating the superimposed image.
 
+|===
+
+==== When adding a property
+IMPORTANT: Set an appropriate data type depending on the content of the property to be added.
+
+* Modified part of Object Detection
+
+1. Add property to Inference type. +
+Here, the data type that exists in the inference result is declared.
++
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
+----
+type Inference = {
+  'class_id': number,
+  'score': number,
+  'left': number,
+  'top': number,
+  'right': number,
+  'bottom': number,
+  'other_property': number // additional parts
+}
+
+----
+|===
+
+2. Add a property to the object declaration part.
++
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
+----
+res = {
+  class_id: Number(objList.classId()),
+  score,
+  left: Number(bbox2d.left()),
+  top: Number(bbox2d.top()),
+  right: Number(bbox2d.right()),
+  bottom: Number(bbox2d.bottom()),
+  other_property: Number(objList.otherProperty()) // additional parts
+}
+
+----
+|===
+
+3. Add property to BoundingBoxProps type.
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export type BoundingBoxProps = {
+  x: number
+  y: number
+  width: number
+  height: number
+  label: string
+  confidence: number
+  bbStrokeColor: string
+  tagStrokeColor: string
+  tagTextColor: string,
+  otherProperty: number // additional parts
+}
+
+----
+|===
+
+4. In the convertInferencesOD function, assign other_property.
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export const convertInferencesOD = (inferenceResults: {}): BoundingBoxProps[] => {
+  const results: BoundingBoxProps[] = []
+  Object.values(inferenceResults).forEach((value: any) => {
+    const bbsElement: BoundingBoxProps = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      label: '',
+      confidence: 0,
+      bbStrokeColor: '',
+      tagStrokeColor: '',
+      tagTextColor: '',
+      otherProperty: 0 // additional parts
+    }
+
+    bbsElement.x = value.left
+    bbsElement.y = value.top
+    bbsElement.width = Math.abs(value.left - value.right)
+    bbsElement.height = Math.abs(value.bottom - value.top)
+    bbsElement.label = value.class_id.toString()
+    bbsElement.confidence = value.score
+    bbsElement.bbStrokeColor = COLORS[value.class_id % COLORS.length][0]
+    bbsElement.tagStrokeColor = COLORS[value.class_id % COLORS.length][0]
+    bbsElement.tagTextColor = COLORS[value.class_id % COLORS.length][1]
+    bbsElement.otherProperty = value.other_property // additional parts
+
+    results.push(bbsElement)
+  })
+  return results
+}
+
+----
+|===
+
+5. The BoundingBoxes component uses a tag that matches with the data and displays it. +
+The following example uses the Text tag of the react-konva package.
++
+|===
+|src/components/common/boundingboxes/index.tsx
+a|
+[source,typescript]
+----
+<Label
+  x={bb.x + MARGIN}
+  y={bb.y + MARGIN - LABEL_OFFSET}
+>
+  <Tag stroke={bb.tagStrokeColor} fill={bb.tagStrokeColor} />
+  <Text fill={bb.tagTextColor} fontSize={14} text={` ${labelText(label, bb.confidence, Number(bb.label))} `} /> 
+  <Text text=bb.otherProperty.toString()/> // additional parts
+</Label>
+
+----
+|===
+* Modified part of Classification
+
+1. Add property to Inference type. +
+Here, the data type that exists in the inference result is declared.
++
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
+----
+type Inference = {
+  'class_id': number
+  'score': number
+  'other_property': number // additional parts
+}
+
+----
+|===
+
+2. Add a property to the object declaration part.
++
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
+----
+res = {
+  class_id: Number(clsList.classId()),
+  score,
+  other_property: Number(clsList.otherProperty()) // additional parts
+}
+
+----
+|===
+
+3. Add property to ClsInferenceProps type.
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export type ClsInferenceProps = {
+  label: string
+  confidence: number
+  otherProperty: number // additional parts
+}
+
+
+----
+|===
+
+4. In the convertInferencesCls function, assign other_property.
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export const convertInferencesCls = (inferenceResults: {}): ClsInferenceProps[] => {
+  const results: ClsInferenceProps[] = []
+  Object.values(inferenceResults).forEach((value: any) => {
+    const ccaElement: ClsInferenceProps = {
+      label: '',
+      confidence: 0,
+      otherProperty: 0 // additional parts
+    }
+
+    ccaElement.label = value.class_id.toString()
+    ccaElement.confidence = value.score
+    ccaElement.otherProperty = value.other_property // additional parts
+
+    results.push(ccaElement)
+  })
+  return results
+}
+
+----
+|===
+
+5. In the Classification component, the tag that matches with the data is used and displayed. +
+The p tag is used in the following example.
++
+|===
+|src/components/tabs/aiTask/classification/index.tsx
+a|
+[source,jsx]
+----
+<div className={styles['inference-data-list']}>
+  {inferences !== undefined
+    ? inferences
+      .filter((cls: ClsInferenceProps) => Math.round(cls.confidence * 1000000) / 10000 >= props.probability)
+      .sort(function (a, b) { return b.confidence - a.confidence })
+      .slice(0, props.displayScore)
+      .map((jsonItem, index) => {
+        return <List key={index}>
+          <ListItem>
+            <div className={styles['inference-parameter']}>
+              <div className={styles['inference-parameter-name']}>{` ${settedLabelText(props.labelData, Number(jsonItem.label))} `}</div>
+              <div className={styles['inference-parameter-percentage']}>{Math.round(jsonItem.confidence * 1000000) / 10000}%</div>
+              <p>jsonItem.otherProperty</p> // additional parts
+            </div>
+            {<Progress colorScheme='green' value={jsonItem.confidence * 100} />}
+          </ListItem>
+        </List>
+      })
+    : <div style={{ fontSize: '14px' }}>Not found inferences list data</div>
+  }
+</ div>
+
+----
+|===
+
+* Modified parts of Segmentation
+
+1. Add property to Inference type. +
+Here, the data type that exists in the inference result is declared.
++
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
+----
+type Inference = {
+  height: number,
+  width: number,
+  classIdMap: number[],
+  numClassId: number,
+  scoreMap: number[],
+  otherProperty: number // additional parts
+}
+----
+|===
+
+2. Add a property to the object declaration part.
++
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
+----
+const deserializedSegmentationData: Inference = {
+  height: Number(readsegData.height()),
+  width: Number(readsegData.width()),
+  classIdMap,
+  numClassId: Number(readsegData.numClassId()),
+  scoreMap,
+  otherProperty: Number(readsegData.otherProperty()) // additional parts
+}
+
+----
+|===
+
+3. Add property to SegInferenceProps type.
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export type SegInferenceProps = {
+  height: number
+  width: number
+  classIdMap: number[]
+  numClassId?: number
+  scoreMap?: number[]
+  otherProperty: number // additional parts
+}
+
+----
+|===
+
+4. Modify the import part. +
+In the following example, the Text tag of react-konva package is also imported.
++
+|===
+|src/components/tabs/aiTask/segmentation/index.tsx
+a|
+[source,jsx]
+----
+import { Stage, Layer, Image, Text } from 'react-konva'
+----
+|===
+
+5. In the Segmentation component, the tag that matches with the data is used and displayed. +
+In the following example, the Text tag of react-konva package is used.
++
+|===
+|src/components/tabs/aiTask/segmentation/index.tsx
+a|
+[source,jsx]
+----
+<div className={styles['inference-data-list']}>
+  {props.image.length !== 0
+    ? <Stage width={canvasWidth} height={canvasHeight} x={MARGIN} y={MARGIN} scaleX={SCALE} scaleY={SCALE}>
+      <Layer>
+        <Image image={image} />
+        <Image image={overlayImage} opacity={1 - (props.transparency / 100)}
+        />
+        <Text text={props.otherProperty} fill="red" width={320} />} // additional parts
+      </Layer>
+    </Stage>
+    : <div style={{ fontSize: '14px' }}>Not found image data</div>
+  }
+</ div>
+
+----
 |===

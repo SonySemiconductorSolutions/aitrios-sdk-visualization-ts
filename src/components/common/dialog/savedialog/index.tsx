@@ -53,7 +53,14 @@ export default function SaveDialog (props: SaveDialogProps) {
         onOpen()
         setIsCancel(false)
         setprogressRate(0)
-        const resIni = await fetch(`/api/initializeDirectory/${props.deviceId}?subDirectory=${props.subDirectory}`, { method: 'POST' })
+        const body = {
+          subDirectory: props.subDirectory
+        }
+        const resIni = await fetch(`/api/initializeDirectory/${props.deviceId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        })
         if (resIni.status !== 200) {
           const errorMessage: ErrorData = await resIni.json()
           handleResponseErr(errorMessage)
@@ -87,7 +94,16 @@ export default function SaveDialog (props: SaveDialogProps) {
   async function saveOriginalImage () {
     try {
       if (progressRate === 20) {
-        const resImage = await fetch(`/api/saveImage/${props.deviceId}?subDirectory=${props.subDirectory}&startIndex=${props.startIndex}&endIndex=${props.endIndex}`, { method: 'POST' })
+        const body = {
+          subDirectory: props.subDirectory,
+          startIndex: props.startIndex,
+          endIndex: props.endIndex
+        }
+        const resImage = await fetch(`/api/saveImage/${props.deviceId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        })
         if (resImage.status !== 200) {
           const errorMessage: ErrorData = await resImage.json()
           handleResponseErr(errorMessage)
@@ -96,7 +112,15 @@ export default function SaveDialog (props: SaveDialogProps) {
           setprogressRate(50)
         }
       } else if (progressRate === 50) {
-        const resIns = await fetch(`/api/saveInferences/${props.deviceId}?subDirectory=${props.subDirectory}&aiTask=${props.aiTask}`, { method: 'POST' })
+        const body = {
+          subDirectory: props.subDirectory,
+          aiTask: props.aiTask
+        }
+        const resIns = await fetch(`/api/saveInferences/${props.deviceId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        })
         if (resIns.status !== 200) {
           const errorMessage: ErrorData = await resIns.json()
           handleResponseErr(errorMessage)
@@ -126,7 +150,16 @@ export default function SaveDialog (props: SaveDialogProps) {
   async function saveOverlaidImageData () {
     try {
       if (progressRate === 20) {
-        const resImage = await fetch(`/api/saveImage/${props.deviceId}?subDirectory=${props.subDirectory}&startIndex=${props.startIndex}&endIndex=${props.endIndex}`, { method: 'POST' })
+        const body = {
+          subDirectory: props.subDirectory,
+          startIndex: props.startIndex,
+          endIndex: props.endIndex
+        }
+        const resImage = await fetch(`/api/saveImage/${props.deviceId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        })
         if (resImage.status !== 200) {
           const errorMessage: ErrorData = await resImage.json()
           handleResponseErr(errorMessage)
@@ -135,7 +168,15 @@ export default function SaveDialog (props: SaveDialogProps) {
           setprogressRate(50)
         }
       } else if (progressRate === 50) {
-        const resIns = await fetch(`/api/saveInferences/${props.deviceId}?subDirectory=${props.subDirectory}&aiTask=${props.aiTask}`, { method: 'POST' })
+        const body = {
+          subDirectory: props.subDirectory,
+          aiTask: props.aiTask
+        }
+        const resIns = await fetch(`/api/saveInferences/${props.deviceId}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        })
         if (resIns.status !== 200) {
           const errorMessage: ErrorData = await resIns.json()
           handleResponseErr(errorMessage)

@@ -81,7 +81,7 @@ export default function SettingMenu (props: SettingMenuProps) {
 
             {props.aiTask === SEGMENTATION && props.transparency !== undefined && props.setTransparency !== undefined
               ? <div className={styles['probability-area']}>
-              <div>transparency</div>
+              <div>Transparency</div>
               <div className={styles['slider-area']}>
                 <CustomSlider icon={<ProbabilitySVG />} currValue={props.transparency} setCurrValue={props.setTransparency} max={100} />
                 <div className={styles['unit-area']}>

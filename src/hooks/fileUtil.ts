@@ -55,10 +55,7 @@ function removeExtension (str: string) {
 
 function createImageFile (filePath: string, imageData: string) {
   try {
-    fs.writeFile(filePath, imageData, { encoding: 'base64' }, (err: any) => {
-      if (err) throw err
-      console.log(`Image Data save in ${filePath}`)
-    })
+    fs.writeFileSync(filePath, imageData, { encoding: 'base64' })
   } catch (err) {
     console.error((err as Error).message)
     throw new Error(JSON.stringify({ message: 'Fail to create Image file.' }))
@@ -121,4 +118,35 @@ export const getTimestampFromImageFIleName = (dir: string) => {
   } catch (e) {
     throw new Error(JSON.stringify({ message: 'Fail to get timestamp list.' }))
   }
+}
+
+export function isRelativePath (storagePath: string) {
+  if (!path.isAbsolute(storagePath)) {
+    throw new Error(JSON.stringify({ message: 'Only absolute paths are supported.' }))
+  }
+  return true
+}
+
+export function isSymbolicLinkFile (path: string) {
+  if (fs.lstatSync(path).isSymbolicLink()) {
+    throw new Error(JSON.stringify({ message: 'Can\'t open symbolic link file.' }))
+  }
+  return true
+}
+
+export function isStoragePathFile (path: string) {
+  try {
+    fs.statSync(path)
+    return true
+  } catch (err) {
+    throw new Error(JSON.stringify({ message: 'Data does not exist.' }))
+  }
+}
+
+export function isFile (filePath: string) {
+  if (!fs.existsSync(filePath)) {
+    const fileName = path.basename(filePath)
+    throw new Error(JSON.stringify({ message: `${fileName} file is not exist.` }))
+  }
+  return true
 }

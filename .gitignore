@@ -28,6 +28,7 @@ yarn-error.log*
 /src/public/*
 !favicon.ico
 src/common/console_access_settings.yaml
+src/common/azure_access_settings.yaml
 
 # work
 src/work
