@@ -1,4 +1,4 @@
-@rem Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+@rem Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
 
 @rem Licensed under the Apache License, Version 2.0 (the "License");
 @rem you may not use this file except in compliance with the License.

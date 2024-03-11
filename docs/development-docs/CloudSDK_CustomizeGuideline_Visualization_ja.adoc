@@ -20,15 +20,19 @@
 |2023/7/5
 |初版作成
 
+|2023/9/11
+|プロパティ追加時の修正方法を追加
+
 |===
 
 == はじめに
 本書は、自作したAITaskとWasmを利用した推論結果を可視化する場合に、「**Visualization**」をカスタマイズする手順を説明するものです。 +
 Object Detection、Classification、Segmentationの3つのAITaskから、どの形式にするか確認し本書を参照してください。 +
+カスタマイズは独自名称プロパティの割り当てとプロパティの追加のみ対応しています。 +
 AITaskごとに推論結果がどのように可視化されるかを確認したい場合は、
 link:CloudSDK_FuncSpec_Visualization_ja.adoc[**「Cloud SDK Visualization 機能仕様書」**]を参照してください。
 
-== 「**Visualization**」のデシリアライズの流れ
+== 「**Visualization**」のデシリアライズからデータ表示までの流れ
 1. `**src/hooks/deserialize/deserializeFunction.ts**` が、選択されているAITaskを識別し、受け取ったデータをデシリアライズする2の処理を呼び出します。
 
 2. `**src/hooks/deserialize/deserializeFunction.ts**` と同階層にある下記ファイルが、FBSファイルから生成されたコードを利用してデシリアライズを行います。
@@ -36,7 +40,9 @@ link:CloudSDK_FuncSpec_Visualization_ja.adoc[**「Cloud SDK Visualization 機能
 - `**src/hooks/deserialize/deserializeClassification.ts**`
 - `**src/hooks/deserialize/deserializeSegmentation.ts**`
 
-3. デシリアライズされたデータは「**Visualization**」の画面上で利用されます。
+3. デシリアライズされたデータは**src/hooks/util.ts**のconvertInferencesOD、convertInferencesClsの関数内で整形されます。
+
+4. 整形されたデータはそれぞれのコンポーネントに渡され、画面表示にされます。
 
 == 変更の手順・詳細
 [#_CodeUpdate]
@@ -44,7 +50,7 @@ link:CloudSDK_FuncSpec_Visualization_ja.adoc[**「Cloud SDK Visualization 機能
 1. FBSファイルを元に自動生成コードを作成します。
 + 
 手順の詳細はlink:https://github.com/SonySemiconductorSolutions/aitrios-sdk-deserialization-sample/blob/main/docs/development-docs/CloudSDK_Tutorial_DeserializeSample_ja.adoc[**「Cloud SDK Deserialize サンプル チュートリアル」**]を参照してください。
-2. 作成したコードで、AITaskごとに所定のディレクトリ内を置き換えます。
+2. 作成したコードで、AITask毎に所定のディレクトリ内を置き換えます。
 +
 .AITask毎の格納先ファイルパス
 |===
@@ -65,6 +71,9 @@ link:CloudSDK_FuncSpec_Visualization_ja.adoc[**「Cloud SDK Visualization 機能
 - 以降の手順で修正しているファイルは、下記表記載のファイルになります。
 +
 .AITask毎の修正対象ファイル
++
+独自名称プロパティを割り当てる場合
++
 |===
 |AITask |ファイルパス 
 
@@ -78,52 +87,88 @@ link:CloudSDK_FuncSpec_Visualization_ja.adoc[**「Cloud SDK Visualization 機能
 |`**src/hooks/deserialize/deserializeSegmentation.ts**`
 
 |===
++
+プロパティを追加する場合
++
+|===
+|AITask |ファイルパス 
 
-==== importするファイルを修正する
+|Object Detection
+|`**src/hooks/deserialize/deserializeObjectDetection.ts**` +
+`**src/hooks/util.ts**` +
+`**src/components/common/boundingboxes/index.tsx**`
 
-1. 自動生成コードを呼び出すファイルを修正します。
+|Classification
+|`**src/hooks/deserialize/deserializeClassification.ts**` +
+`**src/hooks/util.ts**` +
+`**src/components/tabs/aiTask/classification/index.tsx**`
+
+|Segmentation
+|`**src/hooks/deserialize/deserializeSegmentation.ts**` +
+`**src/hooks/util.ts**` +
+`**src/components/tabs/aiTask/segmentation/index.tsx**`
+
+|===
+
+==== importするモジュールのパスを修正する
+
+1. モジュールのパスを修正する
 
 - Object Detectionの修正箇所
 +
-ファイル上部にある下記コードの2~4行目を、自動生成したコードを参照するように修正します。
-[source,typescript]
+ファイル上部にある下記コードの2~4行目を、「自動生成コードの作成と配置を行う」で配置したファイルを参照するように修正します。
 +
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
 ----
 import * as flatbuffers from 'flatbuffers'
 import { ObjectDetectionTop } from './objectdetection/object-detection-top'
 import { BoundingBox } from './objectdetection/bounding-box'
 import { BoundingBox2d } from './objectdetection/bounding-box2d'
 ----
-
+|===
 
 - Classificationの修正箇所
 +
 ファイル上部にある下記コードの2行目を、自動生成したコードを参照するように修正します。
-[source,typescript]
 +
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
 ----
 import * as flatbuffers from 'flatbuffers'
 import { ClassificationTop } from './classification/classification-top'
 ----
+|===
 
 - Segmentationの修正箇所
 +
 ファイル上部にある下記コードの2~3行目を、自動生成したコードを参照するように修正します。
-[source,typescript]
 +
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
 ----
 import * as flatbuffers from 'flatbuffers'
 import { SemanticSegmentationTop } from './segmentation/semantic-segmentation-top'
 import { SemanticSegmentationData } from './segmentation/semantic-segmentation-data'
 ----
+|===
 
-==== オブジェクト宣言を修正する
+==== 独自名称プロパティを割り当てる場合
 1. 下記に記載されているプロパティ説明を参考に適切な値を代入します。
 +
 IMPORTANT: プロパティ名を変更するとエラーが発生し正しく動作しなくなります。
 
 - Object Detectionの修正箇所
 +
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
 [source,typescript]
 ----
 res = {
@@ -135,6 +180,7 @@ res = {
   bottom: Number(bbox2d.bottom())
 }
 ----
+|===
 +
 |===
 |プロパティ名 |説明
@@ -167,6 +213,9 @@ res = {
 
 - Classificationの修正箇所
 +
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
 [source,typescript]
 ----
 res = {
@@ -174,6 +223,7 @@ res = {
   score
 }
 ----
+|===
 +
 |===
 |プロパティ名 |説明
@@ -190,6 +240,9 @@ res = {
 
 - Segmentationの修正箇所
 +
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
 [source,typescript]
 ----
 const deserializedSegmentationData: Inference = {
@@ -200,6 +253,7 @@ const deserializedSegmentationData: Inference = {
   scoreMap
 }
 ----
+|===
 +
 |===
 |プロパティ名 |説明 
@@ -214,7 +268,7 @@ const deserializedSegmentationData: Inference = {
 
 |classIdMap
 |ピクセル毎の推論された `**class_id**` を示す数値型配列です。 +
-重畳画像を生成した後、画面上のラベル設定で色をつけたりする際の対象識別として利用されます。
+重畳画像を生成した後、画面上のラベル設定で色を付けたりする際の対象識別として利用されます。
 
 |numClassId
 |推論結果の候補となる `**class_id**` の数を示す数値です。 +
@@ -222,6 +276,345 @@ const deserializedSegmentationData: Inference = {
 
 |scoreMap
 |ピクセル毎の推論確度を示す数値型配列です。 +
-重畳画像を生成した後、画面上のラベル設定で色をつけたりする際に利用されます。
+重畳画像を生成した後、画面上のラベル設定で色を付けたりする際に利用されます。
 
+|===
+
+==== プロパティを追加する場合
+IMPORTANT: 追加するプロパティの内容に応じて適切なデータ型を設定してください。
+
+* Object Detectionの修正箇所
+
+1. Inference typeにプロパティを追加します。 +
+ここでは推論結果内に存在するデータ型を宣言しています。
++
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
+----
+type Inference = {
+  'class_id': number,
+  'score': number,
+  'left': number,
+  'top': number,
+  'right': number,
+  'bottom': number,
+  'other_property': number // 追加箇所
+}
+
+----
+|===
+
+2. オブジェクト宣言部分にプロパティを追加します。
++
+|===
+|src/hooks/deserialize/deserializeObjectDetection.ts
+a|
+[source,typescript]
+----
+res = {
+  class_id: Number(objList.classId()),
+  score,
+  left: Number(bbox2d.left()),
+  top: Number(bbox2d.top()),
+  right: Number(bbox2d.right()),
+  bottom: Number(bbox2d.bottom()),
+  other_property: Number(objList.otherProperty()) // 追加箇所
+}
+
+----
+|===
+
+3. BoundingBoxProps typeにプロパティを追加します。
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export type BoundingBoxProps = {
+  x: number
+  y: number
+  width: number
+  height: number
+  label: string
+  confidence: number
+  bbStrokeColor: string
+  tagStrokeColor: string
+  tagTextColor: string,
+  otherProperty: number // 追加箇所
+}
+
+----
+|===
+
+4. convertInferencesOD関数内で、other_propertyを代入します。
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export const convertInferencesOD = (inferenceResults: {}): BoundingBoxProps[] => {
+  const results: BoundingBoxProps[] = []
+  Object.values(inferenceResults).forEach((value: any) => {
+    const bbsElement: BoundingBoxProps = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      label: '',
+      confidence: 0,
+      bbStrokeColor: '',
+      tagStrokeColor: '',
+      tagTextColor: '',
+      otherProperty: 0 // 追加箇所
+    }
+
+    bbsElement.x = value.left
+    bbsElement.y = value.top
+    bbsElement.width = Math.abs(value.left - value.right)
+    bbsElement.height = Math.abs(value.bottom - value.top)
+    bbsElement.label = value.class_id.toString()
+    bbsElement.confidence = value.score
+    bbsElement.bbStrokeColor = COLORS[value.class_id % COLORS.length][0]
+    bbsElement.tagStrokeColor = COLORS[value.class_id % COLORS.length][0]
+    bbsElement.tagTextColor = COLORS[value.class_id % COLORS.length][1]
+    bbsElement.otherProperty = value.other_property // 追加箇所
+
+    results.push(bbsElement)
+  })
+  return results
+}
+
+----
+|===
+
+5. BoundingBoxesコンポーネントで、データに合ったタグを使用し表示します。 +
+下記例ではreact-konvaパッケージのTextタグを利用しています。
++
+|===
+|src/components/common/boundingboxes/index.tsx
+a|
+[source,typescript]
+----
+<Label
+  x={bb.x + MARGIN}
+  y={bb.y + MARGIN - LABEL_OFFSET}
+>
+  <Tag stroke={bb.tagStrokeColor} fill={bb.tagStrokeColor} />
+  <Text fill={bb.tagTextColor} fontSize={14} text={` ${labelText(label, bb.confidence, Number(bb.label))} `} /> 
+  <Text text=bb.otherProperty.toString()/> // 追加箇所
+</Label>
+
+----
+|===
+* Classificationの修正箇所
+
+1. Inference typeにプロパティを追加します。 +
+ここでは推論結果内に存在するデータ型を宣言しています。
++
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
+----
+type Inference = {
+  'class_id': number
+  'score': number
+  'other_property': number // 追加箇所
+}
+
+----
+|===
+
+2. オブジェクト宣言部分にプロパティを追加します。
++
+|===
+|src/hooks/deserialize/deserializeClassification.ts
+a|
+[source,typescript]
+----
+res = {
+  class_id: Number(clsList.classId()),
+  score,
+  other_property: Number(clsList.otherProperty()) // 追加箇所
+}
+
+----
+|===
+
+3. ClsInferenceProps typeにプロパティを追加します。
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export type ClsInferenceProps = {
+  label: string
+  confidence: number
+  otherProperty: number // 追加箇所
+}
+
+
+----
+|===
+
+4. convertInferencesCls関数内で、other_propertyを代入します。
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export const convertInferencesCls = (inferenceResults: {}): ClsInferenceProps[] => {
+  const results: ClsInferenceProps[] = []
+  Object.values(inferenceResults).forEach((value: any) => {
+    const ccaElement: ClsInferenceProps = {
+      label: '',
+      confidence: 0,
+      otherProperty: 0 // 追加箇所
+    }
+
+    ccaElement.label = value.class_id.toString()
+    ccaElement.confidence = value.score
+    ccaElement.otherProperty = value.other_property // 追加箇所
+
+    results.push(ccaElement)
+  })
+  return results
+}
+
+----
+|===
+
+5. Classificationコンポーネントで、データに合ったタグを使用し表示します。 +
+下記例ではpタグを利用しています。
++
+|===
+|src/components/tabs/aiTask/classification/index.tsx
+a|
+[source,jsx]
+----
+<div className={styles['inference-data-list']}>
+  {inferences !== undefined
+    ? inferences
+      .filter((cls: ClsInferenceProps) => Math.round(cls.confidence * 1000000) / 10000 >= props.probability)
+      .sort(function (a, b) { return b.confidence - a.confidence })
+      .slice(0, props.displayScore)
+      .map((jsonItem, index) => {
+        return <List key={index}>
+          <ListItem>
+            <div className={styles['inference-parameter']}>
+              <div className={styles['inference-parameter-name']}>{` ${settedLabelText(props.labelData, Number(jsonItem.label))} `}</div>
+              <div className={styles['inference-parameter-percentage']}>{Math.round(jsonItem.confidence * 1000000) / 10000}%</div>
+              <p>jsonItem.otherProperty</p> // 追加箇所
+            </div>
+            {<Progress colorScheme='green' value={jsonItem.confidence * 100} />}
+          </ListItem>
+        </List>
+      })
+    : <div style={{ fontSize: '14px' }}>Not found inferences list data</div>
+  }
+</ div>
+
+----
+|===
+
+* Segmentationの修正箇所
+
+1. Inference typeにプロパティを追加します。 +
+ここでは推論結果内に存在するデータ型を宣言しています。
++
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
+----
+type Inference = {
+  height: number,
+  width: number,
+  classIdMap: number[],
+  numClassId: number,
+  scoreMap: number[],
+  otherProperty: number // 追加箇所
+}
+----
+|===
+
+2. オブジェクト宣言部分にプロパティを追加します。
++
+|===
+|src/hooks/deserialize/deserializeSegmentation.ts
+a|
+[source,typescript]
+----
+const deserializedSegmentationData: Inference = {
+  height: Number(readsegData.height()),
+  width: Number(readsegData.width()),
+  classIdMap,
+  numClassId: Number(readsegData.numClassId()),
+  scoreMap,
+  otherProperty: Number(readsegData.otherProperty()) // 追加箇所
+}
+
+----
+|===
+
+3. SegInferenceProps typeにプロパティを追加します。
++
+|===
+|src/hooks/util.ts
+a|
+[source,typescript]
+----
+export type SegInferenceProps = {
+  height: number
+  width: number
+  classIdMap: number[]
+  numClassId?: number
+  scoreMap?: number[]
+  otherProperty: number // 追加箇所
+}
+
+----
+|===
+
+4. import部分を修正します。 +
+下記例ではreact-konvaパッケージのTextタグを追加でインポートをしています。
++
+|===
+|src/components/tabs/aiTask/segmentation/index.tsx
+a|
+[source,jsx]
+----
+import { Stage, Layer, Image, Text } from 'react-konva'
+----
+|===
+
+5. Segmentationコンポーネントで、データに合ったタグを使用し表示します。 +
+下記例ではreact-konvaパッケージのTextタグを利用しています。
++
+|===
+|src/components/tabs/aiTask/segmentation/index.tsx
+a|
+[source,jsx]
+----
+<div className={styles['inference-data-list']}>
+  {props.image.length !== 0
+    ? <Stage width={canvasWidth} height={canvasHeight} x={MARGIN} y={MARGIN} scaleX={SCALE} scaleY={SCALE}>
+      <Layer>
+        <Image image={image} />
+        <Image image={overlayImage} opacity={1 - (props.transparency / 100)}
+        />
+        <Text text={props.otherProperty} fill="red" width={320} />} // 追加箇所
+      </Layer>
+    </Stage>
+    : <div style={{ fontSize: '14px' }}>Not found image data</div>
+  }
+</ div>
+
+----
 |===

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-import { Client, Config } from 'consoleaccesslibrary'
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { getConsoleSettings } from '../../../common/config'
+import { getSubDirectoryList } from '../../../hooks/getStorageData'
 
 /**
  * Uses Console to get Subdirectory of deviceId
@@ -26,19 +25,8 @@ import { getConsoleSettings } from '../../../common/config'
  * @returns subDirectory list . Ex:['20220120','20220121','20220122']
  */
 const getsubDirectoryList = async (deviceId: string) => {
-  const consoleSettings = getConsoleSettings()
-  let calClient
-  try {
-    const config = new Config(consoleSettings.console_access_settings.console_endpoint, consoleSettings.console_access_settings.portal_authorization_endpoint, consoleSettings.console_access_settings.client_id, consoleSettings.console_access_settings.client_secret)
-    calClient = await Client.createInstance(config)
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
-  }
-  const response = await calClient?.insight.getImageDirectories(deviceId)
-  if (response.status !== 200) {
-    throw new Error(JSON.stringify(response.response.data))
-  }
-  return response.data[0].devices[0].Image
+  const response = await getSubDirectoryList(deviceId)
+  return response
 }
 
 /**

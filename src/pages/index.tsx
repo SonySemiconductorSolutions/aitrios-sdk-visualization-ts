@@ -76,6 +76,7 @@ function Home () {
   const [isFirst, setIsFirst] = useState<boolean>(true)
   const [displayCount, setDisplayCount] = useState<number>(-1)
   const [pollingData, setPollingData] = useState<PollingData | undefined>(undefined)
+  const [abortContoroller, setAbortContoroller] = useState<AbortController>(new AbortController())
 
   const [transparency, setTransparency] = useState<number>(50)
 
@@ -89,7 +90,8 @@ function Home () {
     isFirst,
     setImageCount,
     setIsFirst,
-    setLoadingDialogFlg
+    setLoadingDialogFlg,
+    setIsPlaying
   }
 
   const setDataProps: setDataProps = {
@@ -111,9 +113,7 @@ function Home () {
   }
 
   useInterval(async () => {
-    if (isPlaying) {
-      setPollingData(await pollingHandler(pollingHandlerProps))
-    }
+    setAbortContoroller(new AbortController())
   }, isPlaying ? intervalTimeValue * 1000 : null)
 
   useEffect(() => {
@@ -125,7 +125,19 @@ function Home () {
   useEffect(() => {
     (async () => {
       if (isPlaying) {
-        setPollingData(await pollingHandler(pollingHandlerProps))
+        const pollingData = await pollingHandler(pollingHandlerProps, intervalTimeValue, abortContoroller)
+        setPollingData(pollingData)
+      }
+    })()
+  }, [abortContoroller])
+
+  useEffect(() => {
+    (async () => {
+      if (isPlaying) {
+        setAbortContoroller(new AbortController())
+      } else {
+        abortContoroller.abort('STOP')
+        setLoadingDialogFlg(false)
       }
     })()
   }, [isPlaying])
@@ -313,6 +325,7 @@ function Home () {
                 <TabPanel className={styles['realtime-mode-block']}>
                   <Realtime
                     deviceId={deviceId}
+                    subDirectory={imagePath}
                     setDeviceId={setDeviceId}
                     deviceIdList={deviceIdList}
                     setDeviceIdList={setDeviceIdList}
