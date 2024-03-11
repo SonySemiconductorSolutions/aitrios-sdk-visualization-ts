@@ -52,7 +52,7 @@ DockerBuild対応 +
 
 * クライアントアプリ詳細情報
 ** 「**Portal for AITRIOS**」のクライアントアプリ一覧から参照または、必要に応じてサンプルアプリケーション向けのクライアントアプリ登録を行い、下記情報の取得を行ってください。
-詳細は、 https://developer.aitrios.sony-semicon.com/file/download/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。
+詳細は、 https://developer.aitrios.sony-semicon.com/documents/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。
 *** クライアントID
 *** シークレット
 +
@@ -89,7 +89,7 @@ DockerBuild対応 +
 
 == 環境セットアップ
 
-Codespaces、VS Codeおよび、Dockerのセットアップについては https://developer.aitrios.sony-semicon.com/development-guides/get-started/[「**SDK スタートガイド**」] を参照してください。 +
+Codespaces、VS Codeおよび、Dockerのセットアップについては https://developer.aitrios.sony-semicon.com/downloads#sdk-getting-started[「**SDK スタートガイド**」] を参照してください。 +
 お使いのPC上にNode.js環境をセットアップして実行する場合は、下記の手順を参照してください。
 
 === Node.js環境をセットアップする
@@ -137,7 +137,7 @@ console_access_settings:
 * `**client_id**` に、登録したアプリケーションのクライアントIDを指定します。 +
 +
 
-IMPORTANT: クライアントIDとシークレットの取得方法詳細は、 https://developer.aitrios.sony-semicon.com/file/download/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。 + 
+IMPORTANT: クライアントIDとシークレットの取得方法詳細は、 https://developer.aitrios.sony-semicon.com/documents/portal-user-manual[「**Portalユーザーマニュアル**」] の「SDK用のClient Secretを発行する」をお読みください。 + 
 コンソールエンドポイントとポータル認証エンドポイントの取得方法詳細は、link:++https://developer.aitrios.sony-semicon.com/file/download/rest-api-authentication++[こちらのドキュメント] をお読みください。 +
 これらは「**Console**」へのアクセス情報となります。 + 
 公開したり、他者との共有をせず、取り扱いには十分注意してください。

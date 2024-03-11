@@ -63,7 +63,7 @@ The required connection information is as follows:
 
 * Client application details
 ** Refer to the client application list of "**Portal for AITRIOS**" or register the client application for the sample application if necessary to get the following information: 
-See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/file/download/portal-user-manual["**Portal User Manual**"] for more information.
+See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for more information.
 *** Client ID
 *** Secret
 +
@@ -100,7 +100,7 @@ There are two modes of operation: Realtime Mode, which gets the latest inference
 
 == Set up environment
 
-To set up Codespaces, VS Code, and Docker, see the https://developer.aitrios.sony-semicon.com/en/file/download/sdk-getting-started/["**SDK Getting Started**"]. + 
+To set up Codespaces, VS Code, and Docker, see the https://developer.aitrios.sony-semicon.com/en/downloads#sdk-getting-started["**SDK Getting Started**"]. + 
 To set up and run Node.js on your PC, see the next step.
 
 === Set up Node.js
@@ -148,7 +148,7 @@ console_access_settings:
 * Specify the client ID of the registered application to the `**client_id**`. +
 +
 
-IMPORTANT: See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/file/download/portal-user-manual["**Portal User Manual**"] for how to get client ID and secret. + 
+IMPORTANT: See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for how to get client ID and secret. + 
 See the link:++https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication++[this material]  for how to get console endpoint and portal authorization endpoint. + 
 These will give you access to the "**Console**". + 
 Do not publish or share with others and handle with care.
