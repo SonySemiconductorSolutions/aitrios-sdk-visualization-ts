@@ -19,10 +19,11 @@ import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
 import { format } from 'date-fns'
 import { utcToZonedTime } from 'date-fns-tz'
 import { getConsoleService } from '../../../hooks/getConsoleStorage'
+import { getSubDirectoryList } from '../../../hooks/getStorageData'
 /**
  * Uses Console to request that a get Mode and UploadMethodIR in command parameter files
  *
- * @param deviceId The id of the device to request that it get command parameter files.
+ * @param deviceId The id of the Edge Device to request that it get command parameter files.
  * @returns an object containing information on whether or not the operation succeeded. Ex: { "Mode": "1", "UploadMethodIR": "Mqtt"}
  */
 const getCommandParameterFile = async (deviceId: string) => {
@@ -40,11 +41,15 @@ const getCommandParameterFile = async (deviceId: string) => {
   })
   const mode = 'Mode' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.Mode : 0
   const uploadMethodIR = 'UploadMethodIR' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.UploadMethodIR : 'MQTT'
+  const fileFormat = 'FileFormat' in matchData[0].parameter.commands[0].parameters ? matchData[0].parameter.commands[0].parameters.FileFormat : 'JPG'
 
   if (!((uploadMethodIR === 'MQTT' && CONNECTION_DESTINATION === SERVICE.Console) ||
-      (uploadMethodIR === 'BlobStorage' && CONNECTION_DESTINATION === SERVICE.Azure) ||
+      (uploadMethodIR === 'BlobStorage' && (CONNECTION_DESTINATION === SERVICE.Azure || CONNECTION_DESTINATION === SERVICE.AWS)) ||
       (uploadMethodIR === 'HTTPStorage' && CONNECTION_DESTINATION === SERVICE.Local))) {
     throw new Error(JSON.stringify({ message: 'Command parameters and CONNECTION_DESTINATION do not match.' }))
+  }
+  if (fileFormat !== 'JPG') {
+    throw new Error(JSON.stringify({ message: 'Command Parameter FileFormat supports only JPG.' }))
   }
 
   const result = { mode, uploadMethodIR }
@@ -52,9 +57,9 @@ const getCommandParameterFile = async (deviceId: string) => {
 }
 
 /**
- * Uses Console to request that a device start uploading inference data
+ * Uses Console to request that a Edge Device start uploading inference data
  *
- * @param deviceId The id of the device to request that it starts uploading inference data.
+ * @param deviceId The id of the Edge Device to request that it starts uploading inference data.
  * @returns an object containing information on whether or not the operation succeeded. Ex: { "result": "SUCCESS" }
  */
 const startUploadInferenceResult = async (deviceId: string) => {
@@ -67,14 +72,19 @@ const startUploadInferenceResult = async (deviceId: string) => {
   const calClient = await getConsoleService()
 
   const res = await calClient.deviceManagement.startUploadInferenceResult(deviceId)
+  const response = res.data
   if (typeof res.result !== 'undefined' && (res.result === 'ERROR')) {
     throw new Error(JSON.stringify({ message: res.message }))
   }
   if (typeof res.data.result !== 'undefined' && res.data.result === 'WARNING') {
-    throw new Error(JSON.stringify({ message: res.data.message }))
+    if (res.data.message === 'Device responded with an error when requested. Result = AlreadyStarted') {
+      const getSubDir = await getSubDirectoryList(deviceId)
+      response.outputSubDirectory = `make/${deviceId}/images/${getSubDir.slice(-1)[0]}`
+    } else {
+      throw new Error(JSON.stringify({ message: res.data.message }))
+    }
   }
-  const response = res.data
-  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && response.result === 'SUCCESS') {
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local) {
     const currentDate = new Date()
     const utcDate = utcToZonedTime(currentDate, 'UTC')
     const dateFormat = 'yyyyMMddHHmmssSSS'
@@ -85,10 +95,10 @@ const startUploadInferenceResult = async (deviceId: string) => {
 }
 
 /**
- * Request that a device start uploading inference data.
+ * Request that a Edge Device start uploading inference data.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  *
  * @param res Response
  * result: execution result

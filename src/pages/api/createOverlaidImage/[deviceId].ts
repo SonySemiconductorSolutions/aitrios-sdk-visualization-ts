@@ -16,10 +16,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import * as fs from 'fs'
 import * as path from 'path'
-import { WORK_DIR, getTimestampFromImageFIleName } from '../../../hooks/fileUtil'
+import { WORK_DIR, getTimestampFromImageFileName } from '../../../hooks/fileUtil'
 import Sharp from 'sharp'
 import * as util from '../../../hooks/util'
-import { OBJECT_DETECTION, CLASSIFICATION, SEGMENTATION } from '../../../pages/index'
+import { OBJECT_DETECTION, CLASSIFICATION, SEGMENTATION } from '../../../common/constants'
 import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
 
 /**
@@ -354,7 +354,7 @@ const overlaidImageSEG = async (inferenceDataPath: string, rawImagePath: string,
 /**
  * Uses Console to get image data and save it.
  *
- * @param deviceId The id of the device to get uploading image data.
+ * @param deviceId The id of the Edge Device to get uploading image data.
  * @param subDirectory image data's subdirectory name.
  * @param aiTask The model of the used AI model type.
  * @param labelData Display labels for inference results set.
@@ -370,7 +370,7 @@ async function createOverlaidImage (deviceId: string, subDirectory: string, aiTa
   let timestampList
   try {
     savedDirPath = path.join(WORK_DIR, deviceId, subDirectory)
-    timestampList = getTimestampFromImageFIleName(savedDirPath)
+    timestampList = getTimestampFromImageFileName(savedDirPath)
   } catch (err) {
     throw new Error(JSON.stringify({ message: 'Fail to get timestamp list.' }))
   }
@@ -401,7 +401,7 @@ async function createOverlaidImage (deviceId: string, subDirectory: string, aiTa
  * Create overlaid Image as defined by the query parameter and request body.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  * subDirectory: image data's subdirectory name
  * aiTask: Specify the AI model used  ex.'objectDetection'
  * labelData: Display labels for inference results set

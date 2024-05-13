@@ -17,7 +17,8 @@
 import React, { useEffect, useState } from 'react'
 import { Group, Image, Label, Layer, Rect, Stage, Tag, Text } from 'react-konva'
 import { BoundingBoxProps } from '../../../hooks/util'
-import { OBJECT_DETECTION } from '../../../pages'
+import { OBJECT_DETECTION } from '../../../common/constants'
+import { Action } from '../../../hooks/reducer'
 
 export type BoundingBoxesProps = {
   aiTask: string
@@ -27,9 +28,7 @@ export type BoundingBoxesProps = {
   label: string[]
   inferenceRawData: string | undefined
   setRawData: (inferenceRawData: string | undefined) => void
-  imageCount: number
-  setDisplayCount: (displayCount: number) => void
-  setLoadingDialogFlg: (loadingDialogFlg: boolean) => void
+  dispatch: React.Dispatch<Action>
 }
 
 const BoundingBoxes = ({
@@ -40,9 +39,7 @@ const BoundingBoxes = ({
   label,
   inferenceRawData,
   setRawData,
-  imageCount,
-  setDisplayCount,
-  setLoadingDialogFlg
+  dispatch
 }: BoundingBoxesProps) => {
   const LABEL_OFFSET = 14
   const MARGIN = 20
@@ -65,8 +62,7 @@ const BoundingBoxes = ({
         setCanvasHeight(image.height + MARGIN * 2)
         setBoundingBoxesData(boundingBoxes)
         setRawData(inferenceRawData)
-        setDisplayCount(imageCount)
-        setLoadingDialogFlg(false)
+        dispatch({ type: 'updateDisplayCount' })
       }
     }
   }, [img])

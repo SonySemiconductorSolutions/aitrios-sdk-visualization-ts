@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,13 @@
 import React from 'react'
 import { Td } from '@chakra-ui/react'
 import { labelProps } from '../../../hooks/util'
+import ColorPicker from '../colorPicker'
 
 export default function Label (props: labelProps) {
+  const changeColor = (color:string) => {
+    props.updateColor(color, props.index, props)
+  }
+
   return (
     <>
       <Td py='1' textAlign='center' width={'50px'} borderWidth="1px" borderColor="gray.200" bg="white">
@@ -31,7 +36,7 @@ export default function Label (props: labelProps) {
         <input type={'text'} name={props.label} value={props.label} placeholder={'Label Name'} onChange={(event) => props.updateLabel(event.target.value, props.index, props)} />
       </Td>
       <Td py='1' textAlign='center' width={'50px'} borderWidth="1px" borderColor="gray.200" bg="white">
-        <input role='color' type={'color'} value={props.color} onChange={(event) => props.updateColor(event.target.value, props.index, props)} />
+        <ColorPicker color={props.color} changeColor={changeColor}/>
       </Td>
     </>
   )

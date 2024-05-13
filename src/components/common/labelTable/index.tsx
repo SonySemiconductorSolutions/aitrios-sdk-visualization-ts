@@ -37,15 +37,15 @@ export default function LabelTable (props: LabelTableProps) {
               </Tr>
             </Thead>
             <Tbody style={{ maxHeight: '200px' }}>
-              {props.labelDataSEG.map((value, index) => {
+              {props.data.labelData.map((value, index) => {
                 return (
                   <Tr key={index} >
                     <Label
                       index={index}
                       isVisible={value.isVisible}
                       updateIsVisible={props.updateIsVisible}
-                      labelDataSEG={props.labelDataSEG}
-                      setLabelDataSEG={props.setLabelDataSEG}
+                      data={props.data}
+                      setData={props.setData}
                       id={index}
                       label={value.label}
                       updateLabel={props.updateLabel}

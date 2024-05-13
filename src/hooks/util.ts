@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { CLASSIFICATION, HISTORY_MODE, OBJECT_DETECTION, REALTIME_MODE, SEGMENTATION } from '../pages'
+import { CLASSIFICATION, HISTORY_MODE, OBJECT_DETECTION, REALTIME_MODE, SEGMENTATION } from '../common/constants'
+import { CONNECTION_DESTINATION, SERVICE } from '../common/settings'
+import { State, Action } from '../hooks/reducer'
 
 export type BoundingBoxProps = {
   x: number
@@ -46,12 +48,46 @@ export type SegmentationLabelType = {
   label: string
   color: string
 }
+
+export type OdData = {
+  timestamp: string
+  image: string
+  inference: BoundingBoxProps[] | undefined
+  inferenceRawData: string | undefined
+  labelData: string[]
+}
+
+export type ClsData = {
+  timestamp: string
+  image: string
+  inference: ClsInferenceProps[] | undefined
+  inferenceRawData: string | undefined
+  labelData: string[]
+}
+
+export type SegData = {
+  timestamp: string
+  image: string
+  inference: SegInferenceProps | undefined
+  inferenceRawData: string | undefined
+  labelData: SegmentationLabelType[]
+}
+
+export type DisplaySetting = {
+  probability: number
+  isDisplayTs: boolean
+  displayScore: number
+  isOverlayIR: boolean
+  overlayIRC: string
+  transparency: number
+}
+
 export type labelProps = {
   index: number
   isVisible: boolean
   updateIsVisible: (index: number, props: labelProps) => void
-  labelDataSEG: SegmentationLabelType[]
-  setLabelDataSEG: React.Dispatch<React.SetStateAction<SegmentationLabelType[]>>
+  data: SegData
+  setData: (value: React.SetStateAction<SegData>) => void
   id: number
   label: string
   updateLabel: (value: string, index: number, props: labelProps) => void
@@ -59,30 +95,35 @@ export type labelProps = {
   updateColor: (value: string, index: number, props: labelProps) => void
 }
 
+export type colorPickerProps = {
+  color: string
+  changeColor: (color: string) => void
+}
+
 type UploadHandlerProps = {
-  isUploading: boolean
   deviceId: string
-  subDirectory: string
-  isPlaying: boolean
-  setIsUploading: (isUploading: boolean) => void
   setIsLoading: (isLoading: boolean) => void
-  setImagePath: (imagePath: string) => void
-  setIsPlaying: (isPlaying: boolean) => void
   setLoadingDialogFlg: (loadingDialogFlg: boolean) => void
+  state: State
+  dispatch: React.Dispatch<Action>
 }
 
 export type PollingHandlerProps = {
   deviceId: string
-  imagePath: string
   aiTask: string
   mode: string
-  imageCount: number
-  totalCount: number
-  isFirst: boolean
-  setImageCount: (imageCount: number) => void
-  setIsFirst: (isFirst: boolean) => void
+  setIsLoading: (isLoading: boolean) => void
   setLoadingDialogFlg: (display: boolean) => void
-  setIsPlaying: (isPlaying: boolean) => void
+  state: State
+  dispatch: React.Dispatch<Action>
+}
+
+type ImageAndInferenceData = {
+  image: any
+  timestamp: string
+  inferenceRawData: string
+  inference: string
+  inferenceSeg: SegInferenceProps | string
 }
 
 export type PollingData = {
@@ -97,74 +138,42 @@ export type PollingData = {
 export type setDataProps = {
   pollingData: PollingData | undefined
   aiTask: string
-  imageCount: number
-  totalCount: number
-  setImage: (image: string) => void
-  setImageCls: (image: string) => void
-  setImageSEG: (image: string) => void
-  setTimestamp: (timestamp: string) => void
-  setImageCount: (imageCount: number) => void
-  setIsFirst: (isFirst: boolean) => void
-  setInferencesOD: (inferences: BoundingBoxProps[] | undefined) => void
-  setInferencesCls: (inferences: ClsInferenceProps[] | undefined) => void
-  setInferencesSEG: (inferences: SegInferenceProps | undefined) => void
-  setInferencesRawData: (inferences: string | undefined) => void
+  odData: OdData
+  clsData: ClsData
+  segData: SegData
+  setOdData: (value: React.SetStateAction<OdData>) => void
+  setClsData: (value: React.SetStateAction<ClsData>) => void
+  setSegData: (value: React.SetStateAction<SegData>) => void
   setLoadingDialogFlg: (display: boolean) => void
+  dispatch: React.Dispatch<Action>,
+  isPlaying: boolean
 }
 
 export type ClassficationProps = {
-  aiTask: string
-  timestamp: string
-  image: string
-  inferences: ClsInferenceProps[] | undefined
-  inferenceRawData: string | undefined
-  labelData: string[]
-  setLabelData: (labelData: string[]) => void
-  probability: number
-  isDisplayTs: boolean
-  displayScore: number
-  isOverlayIR: boolean
-  overlayIRC: string
-  imageCount: number
-  setDisplayCount: (displayCount: number) => void
-  setLoadingDialogFlg: (loadingDialogFlg: boolean) => void
-  isFirst: boolean
-  setIsFirst: (isFirst: boolean) => void
+  data: ClsData
+  setData: (value: React.SetStateAction<ClsData>) => void
+  displaySetting: DisplaySetting
+  dispatch: React.Dispatch<Action>
 }
 
 export type ObjectDetectionProps = {
-  aiTask: string
-  timestamp: string
-  image: string
-  inferences: BoundingBoxProps[] | undefined
-  inferenceRawData: string | undefined
-  labelData: string[]
-  setLabelData: (labelData: string[]) => void
-  probability: number
-  isDisplayTs: boolean
-  imageCount: number
-  setDisplayCount: (displayCount: number) => void
-  setLoadingDialogFlg: (loadingDialogFlg: boolean) => void
+  data: OdData
+  setData: (value: React.SetStateAction<OdData>) => void
+  displaySetting: DisplaySetting
+  dispatch: React.Dispatch<Action>
 }
 
 export type SegmentationProps = {
-  aiTask: string
-  timestamp: string
-  inferenceRawData: string | undefined
-  image: string
-  inferences: SegInferenceProps | undefined
-  transparency: number
-  isDisplayTs: boolean
-  labelDataSEG: SegmentationLabelType[]
-  setLabelDataSEG: React.Dispatch<React.SetStateAction<SegmentationLabelType[]>>
-  imageCount: number
-  setDisplayCount: (displayCount: number) => void
+  data: SegData
+  setData: (value: React.SetStateAction<SegData>) => void
+  displaySetting: DisplaySetting
+  dispatch: React.Dispatch<Action>
 }
 
 export type LabelTableProps = {
   headerList: String[]
-  labelDataSEG: SegmentationLabelType[]
-  setLabelDataSEG: React.Dispatch<React.SetStateAction<SegmentationLabelType[]>>
+  data: SegData
+  setData: (value: React.SetStateAction<SegData>) => void
   updateIsVisible: (index: number, props: labelProps) => void
   updateLabel: (value: string, index: number, props: labelProps) => void
   updateColor: (value: string, index: number, props: labelProps) => void
@@ -203,7 +212,17 @@ export type SaveDialogProps = {
 }
 
 export type DeviceListData = {
-  [key:string]: string
+  [key: string]: string
+}
+
+export type DeviceIds = {
+  select: string
+  list: DeviceListData
+}
+
+export type UpdateDeviceIdListProps = {
+  setDeviceIds: (value: React.SetStateAction<DeviceIds>) => void
+  setLoadingDialogFlg: (display: boolean) => void
 }
 
 export const WHITE = 0xffffffff
@@ -260,20 +279,25 @@ const COLORS = [
 
 export const uploadHandler = async (props: UploadHandlerProps) => {
   if (!props.deviceId) {
-    alert('Select Device Name')
+    alert('Select Edge Device Name')
     return
   }
   props.setIsLoading(true)
-  !props.isUploading ? startUpload(props) : stopUpload(props)
+  if (!props.state.isUploading) {
+    startUpload(props)
+  } else {
+    props.dispatch({ type: 'stopPlaying' })
+    stopUpload(props)
+  }
   props.setIsLoading(false)
 }
 
-export const exportLabelDataODorCLS = async (props: ObjectDetectionProps | ClassficationProps) => {
+export const exportLabelDataODorCLS = async (labelData: string[]) => {
   try {
     const file = await window.showSaveFilePicker({ suggestedName: 'label.json' })
     const stream = await file.createWritable()
     const exportDataFormat = {
-      label: props.labelData
+      label: labelData
     }
     const blob = new Blob([JSON.stringify(exportDataFormat, null, 2)], { type: 'application/json' })
     await stream.write(blob)
@@ -311,12 +335,12 @@ export const handleFileInputChangeODorCLS = (event: React.ChangeEvent<HTMLInputE
   }
 }
 
-export const exportLabelDataSegmentation = async (props: SegmentationProps) => {
+export const exportLabelDataSegmentation = async (labelData: SegmentationLabelType[]) => {
   try {
     const file = await window.showSaveFilePicker({ suggestedName: 'labelList.json' })
     const stream = await file.createWritable()
     const exportDataFormat = {
-      labelList: props.labelDataSEG
+      labelList: labelData
     }
     const blob = new Blob([JSON.stringify(exportDataFormat, null, 2)], { type: 'application/json' })
     await stream.write(blob)
@@ -328,7 +352,7 @@ export const exportLabelDataSegmentation = async (props: SegmentationProps) => {
   }
 }
 
-export const importLabelDataSegmentation = (contents: string, props: SegmentationProps) => {
+export const importLabelDataSegmentation = (contents: string, segData: SegData, setData: (value: React.SetStateAction<SegData>) => void) => {
   try {
     const data = JSON.parse(contents)
     if (data.labelList && data.labelList.length !== 0) {
@@ -337,7 +361,8 @@ export const importLabelDataSegmentation = (contents: string, props: Segmentatio
           throw new Error('formatErr')
         }
       })
-      props.setLabelDataSEG([...data.labelList])
+      const newSegData = { ...segData, labelData: [...data.labelList] }
+      setData(newSegData)
     } else {
       throw new Error('formatErr')
     }
@@ -363,13 +388,13 @@ export const checkFileExt = (fileName: string, acceptExt: string) => {
   }
 }
 
-export const handleFileInputChangeSegmentation = (event: React.ChangeEvent<HTMLInputElement>, props: SegmentationProps) => {
+export const handleFileInputChangeSegmentation = (event: React.ChangeEvent<HTMLInputElement>, data: SegData, setData: (value: React.SetStateAction<SegData>) => void) => {
   const file = event.target.files?.[0]
   if (file) {
     if (!checkFileExt(file.name, 'json')) return window.alert('Please Select json File')
     const reader = new FileReader()
     reader.onload = () => {
-      importLabelDataSegmentation(reader.result as string, props)
+      importLabelDataSegmentation(reader.result as string, data, setData)
       event.target.value = ''
     }
     reader.readAsText(file)
@@ -377,50 +402,126 @@ export const handleFileInputChangeSegmentation = (event: React.ChangeEvent<HTMLI
 }
 
 export const updateIsVisible = (i: number, props: labelProps) => {
-  const updateLabelList = [...props.labelDataSEG]
+  const updateLabelList = [...props.data.labelData]
   updateLabelList[i].isVisible = !updateLabelList[i].isVisible
-  props.setLabelDataSEG(updateLabelList)
+  const data = { ...props.data, labelData: updateLabelList }
+  props.setData(data)
 }
 
 export const updateLabel = (value: string, i: number, props: labelProps) => {
-  const updateLabelList = [...props.labelDataSEG]
+  const updateLabelList = [...props.data.labelData]
   updateLabelList[i].label = value
-  props.setLabelDataSEG(updateLabelList)
+  const data = { ...props.data, labelData: updateLabelList }
+  props.setData(data)
 }
 
 export const updateColor = (value: string, i: number, props: labelProps) => {
-  const updateLabelList = [...props.labelDataSEG]
+  const updateLabelList = [...props.data.labelData]
   updateLabelList[i].color = value
-  props.setLabelDataSEG(updateLabelList)
+  const data = { ...props.data, labelData: updateLabelList }
+  props.setData(data)
 }
 
-export const lineAddClickEvent = (props: SegmentationProps, addNumber: number | undefined) => {
+export const lineAddClickEvent = (data: SegData, setData: (value: React.SetStateAction<SegData>) => void, addNumber: number | undefined) => {
   const addObj = {
     isVisible: true,
     label: '',
     color: '#FFFFFF'
   }
-  const newList = [...props.labelDataSEG]
+  const newList = [...data.labelData]
   if (addNumber === undefined || addNumber === 0) {
     newList.splice(0, 0, addObj)
   } else {
     newList.splice(addNumber, 0, addObj)
   }
-  props.setLabelDataSEG([...newList])
+  const newData = { ...data, labelData: [...newList] }
+  setData(newData)
 }
 
-export const delLineClickEvent = (props: SegmentationProps, delNumber: number | undefined, setDelNumber: (delNumber: number) => void) => {
-  const newList = [...props.labelDataSEG]
+export const delLineClickEvent = (data: SegData, setData: (value: React.SetStateAction<SegData>) => void, delNumber: number | undefined, setDelNumber: (delNumber: number) => void) => {
+  const newList = [...data.labelData]
   if (delNumber === undefined || delNumber === 0) {
     newList.splice(0, 1)
   } else {
     newList.splice(delNumber, 1)
   }
-  props.setLabelDataSEG([...newList])
+  const newData = { ...data, labelData: [...newList] }
+  setData(newData)
   setDelNumber(0)
 }
 
-export const pollingHandler = async (props: PollingHandlerProps, intervalTimeValue: number, abortContoroller: AbortController): Promise<PollingData> => {
+export const getImageAndInferenceAccordingImage = async (deviceId: string, imagePath: string, mode: string, aiTask: string, skip: number, signal: AbortSignal): Promise<ImageAndInferenceData> => {
+  const imageAndInferenceData: ImageAndInferenceData = {
+    image: '',
+    timestamp: '',
+    inferenceRawData: '',
+    inference: '',
+    inferenceSeg: ''
+  }
+  const numberOfImages = 1
+  const orderBy = mode === REALTIME_MODE ? 'DESC' : 'ASC'
+  const url = `/api/image/${deviceId}?imagePath=${imagePath}&numberOfImages=${numberOfImages}&skip=${skip}&orderBy=${orderBy}&mode=${mode}`
+  const image = await fetch(url, { method: 'GET', signal })
+  if (image.status === 200) {
+    const imageData = await image.json()
+    const { timestamp } = imageData
+    imageAndInferenceData.image = `data:image/jpg;base64,${imageData.buff}`
+    imageAndInferenceData.timestamp = timestamp
+
+    const inference = await fetch(`/api/inference/${deviceId}?subDirectory=${imagePath}&timestamp=${timestamp}&aiTask=${aiTask}&mode=${mode}`, { method: 'GET', signal })
+    if (inference.status === 200) {
+      const inferenceData = await inference.json()
+      imageAndInferenceData.inferenceRawData = inferenceData.deserializedRawData
+      if (aiTask === SEGMENTATION) {
+        imageAndInferenceData.inferenceSeg = inferenceData.inferencesList.inference_result.Inferences[0]
+      } else {
+        imageAndInferenceData.inference = inferenceData.inferencesList.inference_result.Inferences[0].O[0]
+      }
+    } else {
+      const errorMessage = await inference.json()
+      handleResponseErr(errorMessage)
+    }
+  } else {
+    const errorMessage = await image.json()
+    handleResponseErr(errorMessage)
+  }
+  return imageAndInferenceData
+}
+
+export const getImageAndInferenceAccordingInference = async (deviceId: string, imagePath: string, mode: string, aiTask: string, signal: AbortSignal): Promise<ImageAndInferenceData> => {
+  const imageAndInferenceData: ImageAndInferenceData = {
+    image: '',
+    timestamp: '',
+    inferenceRawData: '',
+    inference: '',
+    inferenceSeg: ''
+  }
+  const inference = await fetch(`/api/latestInference?aiTask=${aiTask}`, { method: 'GET', signal })
+  if (inference.status === 200) {
+    const inferenceData = await inference.json()
+    imageAndInferenceData.timestamp = inferenceData.inference.Inferences[0].T
+    imageAndInferenceData.inferenceRawData = inferenceData.deserializedRawData
+    if (aiTask === SEGMENTATION) {
+      imageAndInferenceData.inferenceSeg = inferenceData.inference.Inferences[0]
+    } else {
+      imageAndInferenceData.inference = inferenceData.inference.Inferences[0].O[0]
+    }
+    const image = await fetch(`/api/specifiedImage?timestamp=${imageAndInferenceData.timestamp}`, { method: 'GET', signal })
+    if (image.status === 200) {
+      const imageData = await image.json()
+      imageAndInferenceData.image = `data:image/jpg;base64,${imageData.buff}`
+    } else {
+      const errorMessage = await image.json()
+      handleResponseErr(errorMessage)
+    }
+  } else {
+    const errorMessage = await inference.json()
+    handleResponseErr(errorMessage)
+  }
+  return imageAndInferenceData
+}
+
+export const pollingHandler = async (props: PollingHandlerProps, abortContoroller: AbortController): Promise<PollingData> => {
   const pollingData: PollingData = {
     image: '',
     timeStamp: '',
@@ -429,103 +530,113 @@ export const pollingHandler = async (props: PollingHandlerProps, intervalTimeVal
     inferenceSeg: '',
     imageCount: 0
   }
+  const delay = 5
+  const setTimeoutId = setTimeout(() => {
+    props.mode === REALTIME_MODE ? props.dispatch({ type: 'stopPlaying' }) : props.dispatch({ type: 'stopPlayingHistory' })
+    abortContoroller.abort('TIMEOUT')
+  }, (props.state.intervalTimeValue * 1000) - delay)
   try {
     let nextImageCount = 0
     if (props.mode === HISTORY_MODE) {
-      if (props.isFirst) {
-        props.setIsFirst(false)
-        nextImageCount = props.imageCount
-      } else if (props.imageCount === props.totalCount - 1) {
+      if (props.state.isFirst) {
+        props.dispatch({ type: 'notFirst' })
+        nextImageCount = props.state.imageCount
+      } else if (props.state.imageCount === props.state.totalCount - 1) {
         nextImageCount = 0
       } else {
-        nextImageCount = props.imageCount + 1
+        nextImageCount = props.state.imageCount + 1
       }
     }
     pollingData.imageCount = nextImageCount
 
-    const numberOfImages = 1
-    const skip = nextImageCount
-    const orderBy = props.mode === REALTIME_MODE ? 'DESC' : 'ASC'
     const signal = abortContoroller.signal
-    const delay = 5
-    const setTimeoutId = setTimeout(() => {
-      props.setIsPlaying(false)
-      abortContoroller.abort('TIMEOUT')
-    }, (intervalTimeValue * 1000) - delay)
 
-    const mode = props.mode
-    const url = `/api/image/${props.deviceId}?imagePath=${props.imagePath}&numberOfImages=${numberOfImages}&skip=${skip}&orderBy=${orderBy}&mode=${mode}`
-    const image = await fetch(url, { method: 'GET', signal })
-    if (image.status === 200) {
-      const imageData = await image.json()
-      const { timestamp } = imageData
-      pollingData.image = `data:image/jpg;base64,${imageData.buff}`
-      pollingData.timeStamp = timestamp
-
-      const inference = await fetch(`/api/inference/${props.deviceId}?subDirectory=${props.imagePath}&timestamp=${timestamp}&aiTask=${props.aiTask}&mode=${mode}`, { method: 'GET', signal })
-      if (inference.status === 200) {
-        const inferenceData = await inference.json()
-        pollingData.inferenceRawData = inferenceData.deserializedRawData
-        if (props.aiTask === SEGMENTATION) {
-          pollingData.inferenceSeg = inferenceData.inferencesList.inference_result.Inferences[0]
-        } else {
-          pollingData.inference = inferenceData.inferencesList.inference_result.Inferences[0].O[0]
-        }
-      } else {
-        const errorMessage = await inference.json()
-        handleResponseErr(errorMessage)
-      }
+    if (CONNECTION_DESTINATION === SERVICE.Local && props.mode === REALTIME_MODE) {
+      const data = await getImageAndInferenceAccordingInference(props.deviceId, props.state.imagePath, props.mode, props.aiTask, signal)
+      pollingData.image = data.image
+      pollingData.timeStamp = data.timestamp
+      pollingData.inferenceRawData = data.inferenceRawData
+      pollingData.inferenceSeg = data.inferenceSeg
+      pollingData.inference = data.inference
     } else {
-      const errorMessage = await image.json()
-      handleResponseErr(errorMessage)
+      const data = await getImageAndInferenceAccordingImage(props.deviceId, props.state.imagePath, props.mode, props.aiTask, nextImageCount, signal)
+      pollingData.image = data.image
+      pollingData.timeStamp = data.timestamp
+      pollingData.inferenceRawData = data.inferenceRawData
+      pollingData.inferenceSeg = data.inferenceSeg
+      pollingData.inference = data.inference
     }
-    clearTimeout(setTimeoutId)
   } catch (e) {
     if (e instanceof DOMException) {
       if (abortContoroller.signal.reason === 'TIMEOUT' && props.mode === REALTIME_MODE) {
         handleResponseErr({ message: 'Communication timed out.\nPolling has stopped, but uploading continues.\nThe following may resolve the problem.\n1. Extend the Polling Interval.' })
+        uploadHandler(props)
+        props.setLoadingDialogFlg(true)
       } else if (abortContoroller.signal.reason === 'TIMEOUT' && props.mode === HISTORY_MODE) {
         handleResponseErr({ message: 'Communication timed out.\nThe following may resolve the problem.\n1. Extend the Polling Interval.\n2. Delete images in subDirectories.' })
       }
     } else {
       handleResponseErr({ message: 'An error has occurred.' })
     }
-    props.setLoadingDialogFlg(false)
   }
+  clearTimeout(setTimeoutId)
   return pollingData
 }
 
 export const setData = async (props: setDataProps) => {
   try {
     if (props.pollingData !== undefined) {
-      props.setInferencesRawData(props.pollingData.inferenceRawData)
+      const data = props.pollingData
+      props.dispatch({ type: 'setImageCount', payload: { imageCount: data.imageCount } })
       if (props.aiTask === OBJECT_DETECTION) {
-        props.setInferencesOD(convertInferencesOD(props.pollingData.inference))
+        props.setOdData({
+          timestamp: data.timeStamp,
+          image: data.image,
+          inference: convertInferencesOD(data.inference),
+          inferenceRawData: data.inferenceRawData,
+          labelData: props.odData.labelData
+        })
       } else if (props.aiTask === CLASSIFICATION) {
-        props.setInferencesCls(convertInferencesCls(props.pollingData.inference))
+        props.setClsData({
+          timestamp: data.timeStamp,
+          image: data.image,
+          inference: convertInferencesCls(data.inference),
+          inferenceRawData: data.inferenceRawData,
+          labelData: props.clsData.labelData
+        })
       } else if (props.aiTask === SEGMENTATION) {
-        if (typeof props.pollingData.inferenceSeg !== 'string') {
-          props.setInferencesSEG(props.pollingData.inferenceSeg)
-        }
+        props.setSegData({
+          timestamp: data.timeStamp,
+          image: data.image,
+          inference: (typeof data.inferenceSeg !== 'string') ? data.inferenceSeg : undefined,
+          inferenceRawData: data.inferenceRawData,
+          labelData: props.segData.labelData
+        })
       }
-
-      props.setImageCount(props.pollingData.imageCount)
-      props.setTimestamp(props.pollingData.timeStamp)
-      // The setImage should be done last due to it run image.onload that need other data.
-      if (props.aiTask === OBJECT_DETECTION) {
-        props.setImage(props.pollingData.image)
-      } else if (props.aiTask === CLASSIFICATION) {
-        props.setImageCls(props.pollingData.image)
-      } else if (props.aiTask === SEGMENTATION) {
-        props.setImageSEG(props.pollingData.image)
-      }
+      props.setLoadingDialogFlg(false)
     }
-
-    props.setLoadingDialogFlg(false)
   } catch (e) {
     console.log(e)
     handleResponseErr({ message: 'An error has occurred.' })
     props.setLoadingDialogFlg(false)
+  }
+}
+
+export const updateDeviceIdList = async (props: UpdateDeviceIdListProps) => {
+  props.setDeviceIds({ select: '', list: {} })
+  props.setLoadingDialogFlg(true)
+  const res = await fetch('/api/deviceInfo/deviceInfo', { method: 'GET' })
+  props.setLoadingDialogFlg(false)
+  if (res.status === 200) {
+    await res.json().then((data) => {
+      if (Object.keys(data).length === 0) {
+        return window.alert('Connected Edge Device not found.')
+      }
+      props.setDeviceIds({ select: '', list: data })
+    })
+  } else {
+    const errorMessage: ErrorData = await res.json()
+    handleResponseErr(errorMessage)
   }
 }
 
@@ -609,26 +720,27 @@ const startUpload = async (props: UploadHandlerProps) => {
     const startUploadResponse = await fetch(`/api/startUploadInferenceResult/${props.deviceId}`, { method: 'POST' })
     if (startUploadResponse.status === 200) {
       const startUploadData = await startUploadResponse.json()
-      props.setIsUploading(true)
       const fullSubDir: string = startUploadData.outputSubDirectory
       const subDirList = fullSubDir.split('/')
       const subDir = subDirList[subDirList.length - 1]
-      props.setImagePath(subDir)
+      props.dispatch({ type: 'startUpload', payload: { imagePath: subDir } })
+      setTimeout(() => {
+        props.dispatch({ type: 'startPlaying' })
+      }, 3000)
     } else {
       const errorMessage: ErrorData = await startUploadResponse.json()
       handleResponseErr(errorMessage)
+      props.setLoadingDialogFlg(false)
     }
   } catch (e) {
     handleResponseErr({ message: 'An error has occurred.' })
-  } finally {
-    props.setLoadingDialogFlg(false)
   }
 }
 
 const stopUpload = async (props: UploadHandlerProps) => {
   try {
     const body = {
-      subDirectory: props.subDirectory
+      subDirectory: props.state.imagePath
     }
     const stopUploadResponse = await fetch(`/api/stopUploadInferenceResult/${props.deviceId}`, {
       method: 'POST',
@@ -636,12 +748,9 @@ const stopUpload = async (props: UploadHandlerProps) => {
       body: JSON.stringify(body)
     })
     if (stopUploadResponse.status === 200) {
-      props.setIsUploading(false)
-      props.setIsPlaying(false)
-      props.setImagePath('')
+      props.dispatch({ type: 'stopUpload' })
     } else {
-      props.setIsUploading(props.isUploading)
-      props.setIsPlaying(props.isPlaying)
+      props.dispatch({ type: 'stopPlayingFailure' })
       const errorMessage: ErrorData = await stopUploadResponse.json()
       handleResponseErr(errorMessage)
     }
@@ -676,22 +785,36 @@ export const writeZip = async (props: SaveDialogProps) => {
   try {
     const result = await fetch('/api/createZip/zipFile', { method: 'POST' })
     if (result.status === 200) {
-      const response = await fetch('/api/zipData/zipData', { method: 'GET' })
-      if (response.status === 200 && props.fs !== undefined) {
-        const zipData = await response.json()
-        const data = new Uint8Array(zipData.buff.data)
-        const blob = new Blob([data], { type: 'application/zip' })
-        const stream = await props.fs.createWritable()
-        await stream.write(blob)
-        await stream.close()
-        return true
-      } else {
+      const response = await fetch('/api/zipData/zipData')
+
+      if (!response.body || response.status !== 200) {
         const errorMessage: ErrorData = await response.json()
-        handleResponseErr(errorMessage)
+        return handleResponseErr(errorMessage)
       }
-    } else {
-      const errorMessage: ErrorData = await result.json()
-      handleResponseErr(errorMessage)
+      if (props.fs !== undefined) {
+        const reader = response.body.getReader()
+        const stream = new ReadableStream({
+          async start (controller) {
+            let checkEnque = true
+            while (checkEnque) {
+              const { done, value } = await reader.read()
+              if (done) {
+                checkEnque = false
+                continue
+              }
+              controller.enqueue(value)
+            }
+            controller.close()
+            reader.releaseLock()
+          }
+        })
+        const blob = await new Response(stream).blob()
+
+        const writableStream = await props.fs.createWritable()
+        await writableStream.write(blob)
+        await writableStream.close()
+        return true
+      }
     }
   } catch (e) {
     console.error(e)
@@ -864,4 +987,17 @@ export function segStringify (json: any, key: string = '', indent: number = 0) {
   }
   data += addIndent(indent) + endSentence
   return data
+}
+
+export function convertDate (subDir: string) {
+  const convertedFromDate = new Date(
+    Number(subDir.slice(0, 4)),
+    Number(subDir.slice(4, 6)) - 1,
+    Number(subDir.slice(6, 8)),
+    Number(subDir.slice(8, 10)),
+    Number(subDir.slice(10, 12)),
+    Number(subDir.slice(12, 14)),
+    Number(subDir.slice(14, 17))
+  )
+  return convertedFromDate
 }

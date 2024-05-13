@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ type SaveMenuProps = {
   deviceId: string
   max: number
   subDirectory: string
+  isPlaying: boolean
   aiTask: string
   labelDataOD: string[]
   labelDataCLS:string[]
@@ -61,7 +62,7 @@ export default function SaveMenu (props: SaveMenuProps) {
 
   return (
     <>
-      <DefaultButton isLoading={false} icon={<SaveSVG />} text='Save Data' disabled={!props.subDirectory} action={onOpen}></DefaultButton>
+      <DefaultButton isLoading={false} icon={<SaveSVG />} text='Save Data' disabled={!props.subDirectory || props.isPlaying} action={onOpen}></DefaultButton>
       <Modal closeOnOverlayClick={false} closeOnEsc={false} isOpen={isOpen} onClose={onClose} size={'xl'}>
         <ModalOverlay />
         <ModalContent>

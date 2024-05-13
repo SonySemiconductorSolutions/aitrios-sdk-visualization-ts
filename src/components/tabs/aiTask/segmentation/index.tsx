@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { Textarea, Button } from '@chakra-ui/react'
 import DropDownList from '../../../common/dropdownlist'
 import LabelTable from '../../../common/labelTable'
@@ -33,10 +33,12 @@ import {
   hexColorToDecArray,
   segStringify
 } from '../../../../hooks/util'
-import { SEGMENTATION } from '../../../../pages'
+import { SEGMENTATION } from '../../../../common/constants'
+import { UserContext } from '../../../../hooks/context'
 
 export const ROWDATA_EXPLANATION = 'Inference Result'
 export default function Segmentation (props: SegmentationProps) {
+  const { aiTask } = useContext(UserContext)
   const [addNumber, setAddNumber] = useState<number>(0)
   const [delNumber, setDelNumber] = useState<number>(0)
   const [lineNumber, setLineNumber] = useState<number[]>([])
@@ -52,7 +54,7 @@ export default function Segmentation (props: SegmentationProps) {
   const [timeStamp, setTimeStamp] = useState<string>('')
 
   useEffect(() => {
-    const length = props.labelDataSEG.length
+    const length = props.data.labelData.length
     const addLength = length + 1
     const arr = Array.from({ length }, (_, index) => index)
     const addArr = Array.from({ length: addLength }, (_, index) => index)
@@ -62,40 +64,40 @@ export default function Segmentation (props: SegmentationProps) {
     setDelNumber(arr.length - 1)
 
     const newLabelColorsArr: number[][] = []
-    props.labelDataSEG.forEach(elm => {
+    props.data.labelData.forEach(elm => {
       newLabelColorsArr.push(hexColorToDecArray(elm))
     })
     setLabelColorsArr([...newLabelColorsArr])
-  }, [props.labelDataSEG])
+  }, [props.data.labelData])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && props.aiTask === SEGMENTATION) {
+    if (typeof window !== 'undefined' && aiTask === SEGMENTATION) {
       const image = new window.Image()
       const overlayImage = new window.Image()
-      if (typeof props.image === 'string') {
-        image.src = props.image
+      if (typeof props.data.image === 'string') {
+        image.src = props.data.image
       }
       image.onload = () => {
-        if (props.inferences === undefined || !props.inferences.width || !props.inferences.height) {
+        if (props.data.inference === undefined || !props.data.inference.width || !props.data.inference.height) {
           setOverlayImage(undefined)
         } else {
           const canvas = document.createElement('canvas')
           const ctx = canvas.getContext('2d')
-          canvas.width = props.inferences.width
-          canvas.height = props.inferences.height
-          const overImage = ctx!.createImageData(props.inferences.width, props.inferences.height)
+          canvas.width = props.data.inference.width
+          canvas.height = props.data.inference.height
+          const overImage = ctx!.createImageData(props.data.inference.width, props.data.inference.height)
           const d = overImage.data
-          if (props.inferences.scoreMap?.length === 0 && labelColorsArr.length !== 0) {
+          if (props.data.inference.scoreMap?.length === 0 && labelColorsArr.length !== 0) {
             for (let i = 0; i < d.length; i += 4) {
-              const id = props.inferences.classIdMap[i / 4]
+              const id = props.data.inference.classIdMap[i / 4]
               if (labelColorsArr[id] === undefined) continue
               d[i] = labelColorsArr[id][0] // red
               d[i + 1] = labelColorsArr[id][1] // green
               d[i + 2] = labelColorsArr[id][2] // blue
               d[i + 3] = labelColorsArr[id][3] // alpha
             }
-          } else if (props.inferences.numClassId !== 0 && labelColorsArr.length !== 0) {
-            const inference = props.inferences
+          } else if (props.data.inference.numClassId !== 0 && labelColorsArr.length !== 0) {
+            const inference = props.data.inference
             for (let i = 0; i < d.length; i += 4) {
               const maxClassId = convertInferencesSEG(inference, i / 4)
               if (labelColorsArr[maxClassId] === undefined) continue
@@ -113,26 +115,26 @@ export default function Segmentation (props: SegmentationProps) {
         setImage(image)
         setCanvasWidth(image.width * SCALE + MARGIN * 2)
         setCanvasHeight(image.height * SCALE + MARGIN * 2)
-        setRawData(props.inferenceRawData)
-        setTimeStamp(props.timestamp)
-        props.setDisplayCount(props.imageCount)
+        setRawData(props.data.inferenceRawData)
+        setTimeStamp(props.data.timestamp)
+        props.dispatch({ type: 'updateDisplayCount' })
       }
     }
-  }, [props.image, labelColorsArr])
+  }, [props.data.image, labelColorsArr])
 
   return (
     <div className={styles['segmentation-container']}>
-      {props.isDisplayTs === true
+      {props.displaySetting.isDisplayTs === true
         ? <div className={styles['timestamp-area']}>Timestamp:{timeStamp}</div>
         : null
       }
       <div className={styles['upper-items']}>
         <div style={{ border: '1px solid black', width: canvasWidth, height: canvasHeight }}>
-          {props.image.length !== 0
+          {props.data.image.length !== 0
             ? <Stage width={canvasWidth} height={canvasHeight} x={MARGIN} y={MARGIN} scaleX={SCALE} scaleY={SCALE}>
               <Layer>
                 <Image image={image} />
-                <Image image={overlayImage} opacity={1 - (props.transparency / 100)}
+                <Image image={overlayImage} opacity={1 - (props.displaySetting.transparency / 100)}
                 />
               </Layer>
             </Stage>
@@ -151,8 +153,8 @@ export default function Segmentation (props: SegmentationProps) {
           <div className={styles['table-area']}>
             <LabelTable
               headerList={['Visible', 'Id', 'Label', 'Color']}
-              labelDataSEG={props.labelDataSEG}
-              setLabelDataSEG={props.setLabelDataSEG}
+              data={props.data}
+              setData={props.setData}
               updateIsVisible={updateIsVisible}
               updateLabel={updateLabel}
               updateColor={updateColor}
@@ -170,7 +172,7 @@ export default function Segmentation (props: SegmentationProps) {
               defaultSpace={false}
             />
             <Button
-              onClick={() => lineAddClickEvent(props, addNumber)}
+              onClick={() => lineAddClickEvent(props.data, props.setData, addNumber)}
               style={{ color: '#ffffff', backgroundColor: '#2d78be' }}
               variant='solid'
               size='sm'
@@ -188,7 +190,7 @@ export default function Segmentation (props: SegmentationProps) {
               defaultSpace={false}
             />
             <Button
-              onClick={() => delLineClickEvent(props, delNumber, setDelNumber)}
+              onClick={() => delLineClickEvent(props.data, props.setData, delNumber, setDelNumber)}
               style={{ color: '#ffffff', backgroundColor: '#2d78be' }}
               variant='solid'
               size='sm'
@@ -210,11 +212,11 @@ export default function Segmentation (props: SegmentationProps) {
                 type='file'
                 accept='.json'
                 style={{ display: 'none' }}
-                onChange={(event) => handleFileInputChangeSegmentation(event, props)}
+                onChange={(event) => handleFileInputChangeSegmentation(event, props.data, props.setData)}
               />
             </Button>
             <Button
-              onClick={() => exportLabelDataSegmentation(props)}
+              onClick={() => exportLabelDataSegmentation(props.data.labelData)}
               style={{ color: '#ffffff', backgroundColor: '#2d78be' }}
               variant='solid'
               size='md'
