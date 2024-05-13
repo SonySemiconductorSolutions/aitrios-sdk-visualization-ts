@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,14 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { readZipFileData } from '../../../hooks/fileUtil'
+import { getZipFileName } from '../../../hooks/fileUtil'
+import * as fs from 'fs'
+
+export const config = {
+  api: {
+    responseLimit: false
+  }
+}
 
 /**
  * Get zip data.
@@ -24,16 +31,24 @@ import { readZipFileData } from '../../../hooks/fileUtil'
  * @param res Response
  *
  */
+
 export default function handler (req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.status(405).json({ message: 'Only GET requests.' })
     return
   }
-
   try {
-    const buff = readZipFileData()
-    return res.status(200).json({ buff })
-  } catch (err) {
-    return res.status(500).json({ message: 'Failed get zip data.' })
+    const zipFilePath = getZipFileName()
+    const chunkSize = 1024
+    const stat = fs.statSync(zipFilePath)
+    res.writeHead(200, {
+      'Content-Length': stat.size,
+      'Content-Type': 'application/zip'
+    })
+    const readStream = fs.createReadStream(zipFilePath, { highWaterMark: chunkSize })
+    readStream.pipe(res)
+  } catch (e) {
+    console.log(e)
+    res.status(500).json({ message: 'Failed get zip data.' })
   }
 }

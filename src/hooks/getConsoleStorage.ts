@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import { getConsoleAccessLibrarySettings } from '../common/config'
 
 export async function getConsoleService () {
   let calClient
+  const consoleSettings = getConsoleAccessLibrarySettings()
   try {
-    const consoleSettings = getConsoleAccessLibrarySettings()
     const config = new Config(consoleSettings.console_access_settings.console_endpoint,
       consoleSettings.console_access_settings.portal_authorization_endpoint,
       consoleSettings.console_access_settings.client_id,
@@ -36,9 +36,9 @@ export async function getConsoleService () {
   return calClient
 }
 
-export async function getImageFromConsole (deviceId: string, subDirectory: string, orderBy?: string, skip?:number, numberOfImages?: number) {
+export async function getImageFromConsole (deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number, fromDatetime?: string, toDatetime?: string) {
   const client = await getConsoleService()
-  const imageData = await client.insight.getImageData(deviceId, subDirectory, numberOfImages, skip, orderBy)
+  const imageData = await client.insight.getImageData(deviceId, subDirectory, numberOfImages, skip, orderBy, fromDatetime, toDatetime)
   const response = {
     total_image_count: imageData.total_image_count,
     images: imageData.images
@@ -57,7 +57,6 @@ export async function getInferenceFromConsole (deviceId: string, startTime?: str
   for (let i = 0; i < resInference.data.length; i++) {
     inferences.push(resInference.data[i])
   }
-  console.log('InferenceList response:', JSON.stringify(resInference.data[0].inference_result.Inferences[0]))
   return inferences
 }
 

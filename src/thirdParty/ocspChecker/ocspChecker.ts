@@ -383,7 +383,7 @@ export function getOCSPStatus(inputURL: string, proxy: any, options: any) {
                 }
             })
             .catch((e) => {
-                return resolve(response)
+                return reject(new Error(e))
             })
         } catch (error) {
             return resolve(response)
@@ -462,6 +462,8 @@ function getSSLCertificate(hostname: string, proxy?: string): Promise<SSLCertifi
                 }
                 resolve(cert)
             }
+        }).on("error", (err: any) => {
+            reject(err.message)
         })
     })
 }

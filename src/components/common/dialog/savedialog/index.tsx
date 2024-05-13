@@ -18,7 +18,7 @@ import { Button, Modal, ModalBody, ModalContent, ModalHeader, ModalOverlay, Prog
 import React, { useEffect, useState } from 'react'
 import styles from './savedialog.module.scss'
 import { writeZip, SaveDialogProps, handleResponseErr, ErrorData } from '../../../../hooks/util'
-import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../../../../pages'
+import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../../../../common/constants'
 
 const buttonStyle = {
   bg: '#dcdcdc',

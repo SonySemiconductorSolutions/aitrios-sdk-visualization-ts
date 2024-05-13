@@ -25,7 +25,7 @@
 |Changed for "**Cloud SDK**" 0.2.0
 
 |2023/3/22
-|Added support for local saving +
+|Added support for Local saving +
 Added support for Semantic Segmentation
 
 |2023/4/13
@@ -54,11 +54,21 @@ Added that garbled characters occur in some environments
 
 |2023/09/01
 |Supported Console Developer Edition and Console Enterprise Edition
+
+|2023/12/05
+|AWS support
+
+|2024/01/23
+|Support to integrate StartPolling button with the StartUpload button
+
+|2024/02/05
+|FPS improvement measures when using Local Storage
+
 |===
 
 == Introduction
 This tutorial shows you how to use "**Visualization**". + 
-"**Visualization**" is provided to check the inference results which the edge AI device uploaded to "**Console**", "Azure Blob Storage" and "Local Storage".
+"**Visualization**" is provided to check the inference results which the Edge Device uploaded to "**Console**", "Azure Blob Storage" and "Local Storage".
 
 [#_precondition]
 == Prerequisite
@@ -70,23 +80,42 @@ The required connection information is as follows:
 * Client application details
 - When using "**Console Developer Edition**"
 ** Refer to the client application list of "**Portal for AITRIOS**" or register the client application for the sample application if necessary to get the following information: 
-See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for more information.
+See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/portal-user-manual/["**Portal User Manual**"] for more information.
 *** Client ID
 *** Secret
 +
-** Get the following information from https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication[this material]:
+
+** Get the following information from https://developer.aitrios.sony-semicon.com/en/file/download/edge-ai-sensing-portal-console-end-point-info/["**Endpoint Information of Portal and Console**"]:
 *** Console endpoint
 *** Portal authorization endpoint
 
 - When using "**Console Enterprise Edition**"
 ** Please contact "**Console**" deployment representative (Service Administrator).
 
-To use "Azure Blob Storage", the connection information to access "Azure Blob Storage" is required.
-For details, please refer to https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account[ "**Configure a connection string for an Azure storage account**" ]
+- To use Azure Blob Storage, the connection information to access Azure Blob Storage is required. +
+For details, please refer to https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account[ "**Configure a connection string for an Azure storage account**" ].
+
+- To use Amazon S3, connection information is required to access Amazon S3. +
+** Please obtain the following information by referring to https://learn.microsoft.com/en-us/azure/storage/common/storage-configure-connection-string#configure-a-connection-string-for-an-azure-storage-account["**AWS Identity and Access Management**"]. +
++
+*** Access key ID
+*** Secret access key
++
+NOTE: Use an account without MFA setting for external transfer settings for obtaining the AccessKey that is used in external transfer settings or applications.
+
+** Please obtain the following information by referring to https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html["**User Guide for Linux instances**"]. +
++
+*** Region
++
+
+** Create a bucket referring to https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html["**Amazon Simple Storage Service (S3)**"] and obtain the following information. +
++
+*** Bucket name
++
 
 
-=== Edge AI devices
-In order for the "**Visualization**" to work properly, the edge AI device must have specific settings. + 
+=== Edge Devices
+In order for the "**Visualization**" to work properly, the Edge Device must have specific settings. + 
 Required settings are as follows:
 
 * AI model and application are deployed
@@ -98,26 +127,32 @@ Required settings are as follows:
 When not described, the following values are set automatically. +
 UploadMethod="BlobStorage" +
 UploadMethodIR="Mqtt"
-** "Azure Blob Storage" +
+** When using Azure Blob Storage/Amazon S3 +
 UploadMethod="BlobStorage" +
 UploadMethodIR="BlobStorage"
-** "Local Storage" +
+** When using Local Storage +
 UploadMethod="HTTPStorage" +
-UploadMethodIR="HTTPStorage" 
+UploadMethodIR="HTTPStorage" +
+** All common upload locations +
+NumberOfInferencesPerMessage=1 +
+FileFormat="JPG" +
+Mode=1 +
 +
-** Other parameters need to be changed depending on the AI model and application content.
+NOTE: Other parameters need to be changed depending on the AI model and application content.
 
 === External transfer settings
-* When using "Azure Blob Storage" +
-When using "Azure Blob Storage", complete the settings available in https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-azure-blob-storage[External transfer setting tutorial(Azure Blob Storage)]. +
-* When using "Local Storage" +
-When using "Local Storage", complete the settings available in the https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/external-transfer-settings-tutorial-for-http-server[External transfer settings tutorial(Local HTTP Server)].
+* When using Azure Blob Storage +
+When using Azure Blob Storage, complete the settings available in External transfer setting tutorial (Azure Blob Storage). 
+* When using Amazon S3 +
+When using Amazon S3, complete the settings in the External transfer settings tutorial (Amazon S3).
+* When using Local Storage +
+When using Local Storage, complete the settings available in the External transfer settings tutorial (Local HTTP Server).
 +
 
-IMPORTANT: Uploads from the device to HTTP Server are not encrypted due to HTTP communication.
+IMPORTANT: Uploads from the Edge Device to HTTP Server are not encrypted due to HTTP communication.
 
 == Functional overview
-"**Visualization**" specifies the edge AI device registered in the "**Console**" and gets inference results and images. + 
+"**Visualization**" specifies the Edge Device registered in the "**Console**" and gets inference results and images. + 
 There are two modes of operation: Realtime Mode, which gets the latest inference results, and History Mode, which gets past inference results.
 
 
@@ -125,20 +160,20 @@ There are two modes of operation: Realtime Mode, which gets the latest inference
 "**Visualization**" can be run in one of the following environments:
 
 * GitHub Codespaces (Hereafter referred to as Codespaces)
-** However, when checking the inference results uploaded to "Local Storage", Codespaces cannot be used.
+** However, when checking the inference results uploaded to Local Storage, Codespaces cannot be used.
 * Dev Container using Visual Studio Code (Hereafter referred to as VS Code) and Docker
 * Docker container
 * Node.js
 
 == Set up environment
 
-To set up Codespaces, VS Code, and Docker, see the https://developer.aitrios.sony-semicon.com/en/downloads#sdk-getting-started["**SDK Getting Started**"]. + 
+To set up Codespaces, VS Code, and Docker, see the https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/sdk-getting-started/["**SDK Getting Started**"]. + 
 To set up and run Node.js on your PC, see the next step.
 
 === Set up Node.js
 
 . Install Node.js + 
-Get the installer for your environment from https://nodejs.org/en/download/[the official site] and install it. +
+Get the installer for your environment from https://nodejs.org/en/download/[The Official Site] and install it. +
 +
 IMPORTANT: Use version 18 of Node.js.
 
@@ -155,7 +190,7 @@ For other cloning methods, see https://docs.github.com/en/repositories/creating-
 [#_Execute_visualization]
 == Use "**Visualization**"
 
-Use the connection information prepared in the <<#_precondition,"Prerequisite">>
+Use the connection information prepared in the <<#_precondition,"Prerequisite">>.
 
 === Set connection information
 . Create the [console_access_settings.yaml] under the [src/common] on Codespaces or on an environment that has cloned a repository, and set the connection information.
@@ -180,8 +215,11 @@ console_access_settings:
 * Specify the Client ID of the registered application to the `**client_id**`. +
 +
 
-IMPORTANT: See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/documents/portal-user-manual["**Portal User Manual**"] for how to get Client ID and Secret. + 
-See the link:++https://developer.aitrios.sony-semicon.com/en/file/download/rest-api-authentication++[this material]  for how to get Console endpoint and Portal authorization endpoint. + 
+See the link:++https://developer.aitrios.sony-semicon.com/en/file/download/edge-ai-sensing-portal-console-end-point-info/++["**Endpoint Information of Portal and Console**"] for how to get Console endpoint and Portal authorization endpoint. + 
+
+IMPORTANT: See the "Issuing a Client Secret for SDK" in https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/portal-user-manual/["**Portal User Manual**"] for how to get Client ID and Secret. + 
+See the link:++https://developer.aitrios.sony-semicon.com/en/file/download/edge-ai-sensing-portal-console-end-point-info/++["**Endpoint Information of Portal and Console**"] for how to get Console endpoint and Portal authorization endpoint. + 
+
 These will give you access to the "**Console**". + 
 Do not publish or share with others and handle with care.
 +
@@ -204,7 +242,7 @@ console_access_settings:
 ----
 |===
 +
-* Speech Console endpoint to `**console_endpoint**` +
+* Speech Console endpoint to `**console_endpoint**`. +
 * Specify the Portal authentication endpoint in `**portal_authorization_endpoint**`. +
 The Portal authentication endpoint is specified in the format of `**\https://login.microsoftonline.com/{TenantID}**`. +
 *	In `**client_secret**`, specify the Secret of the registered application. +
@@ -217,8 +255,8 @@ Do not disclose it to the public or share it with others, handle it with care. +
 +
 NOTE: When executing "**Visualization**" in the Proxy environment, set the environment variable `**https_proxy**`.
 
-. Create [azure_access_settings.yaml] under [src/common] in the environment where Codespaces or the repository is cloned and set the connection destination information. +
-This is set when the destination to obtain the inference results is "Azure Blob Storage".
+. Create [azure_access_settings.yaml] under [src/common] in the environment where the repository is cloned or in Codepaces and set the connection destination information. +
+This setting is set when the destination to obtain the inference results is Azure Blob Storage.
 
 +
 |===
@@ -232,14 +270,39 @@ azure_access_settings:
 ----
 |===
 +
-* specify the Connection information of "Azure Blob Storage" in `**connection_string**`. +
-* Specify the Container name of "Azure Blob Storage" in `**container_name**`. +
+* Specify the Connection information of Azure Blob Storage in `**connection_string**`. +
+* Specify the Container name of Azure Blob Storage in `**container_name**`. +
 +
 
-IMPORTANT: These are the access information to "Azure Blob Storage". +
+IMPORTANT: These are the access information to Azure Blob Storage. +
 Do not disclose it to the public or share it with others, handle it with care.
 
-. In the environment  Codespaces or the repository is cloned, set the connection destination information to [settings.ts] under [src/common].
+. Create [aws_access_settings.yaml] under [src/common] in the environment where the repository is cloned or in Codepaces and set the connection destination information. +
+This setting is set when the destination to obtain the inference results is Amazon S3.
+
++
+|===
+|src/common/aws_access_settings.yaml
+a|
+[source,Yaml]
+----
+aws_access_settings:
+  bucket_name: "Bucket name"
+  access_key_id: "Access key ID"
+  secret_access_key: "Secret access key"
+  region: "Region"
+----
+|===
++
+* Set `**bucket_name**` to the Amazon S3 bucket name. +
+* In `**access_key_id**`, specify the access key ID of Amazon S3. +
+* Specify the Amazon S3 `**secret_access_key**` in secret_access_key. +
+* In `**region**`, specify the Amazon S3 region.
++
+IMPORTANT: These are the access information to Amazon S3. +
+Do not disclose it to the public or share it with others and handle it with caution.
+
+. In the environment Codespaces or the repository is cloned, set the connection destination information to [settings.ts] under [src/common].
 +
 |===
 |src/common/settings.ts
@@ -249,6 +312,7 @@ a|
 export const SERVICE = {
   Console: 'console',
   Azure: 'azure',
+  AWS: 'aws',
   Local: 'local'
 } as const
 type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE];
@@ -259,19 +323,20 @@ export const LOCAL_ROOT = ''
 |===
 +
 * In `**CONNECTION_DESTINATION**`, set the destination location from where the inference results are fetched. The default setting is `**SERVICE.Console**`.
-* Specify the path of "Local Storage" in `**LOCAL_ROOT**`. +
+* Specify the path of Local Storage in `**LOCAL_ROOT**`. +
 This setting is used when `**SERVICE.Local**` is specified in `**CONNECTION_DESTINATION**`.
 
 NOTE: When using the Dev Container environment, the folder is placed in the folder where Local Storage is git cloned folder and +
-Set LOCAL_ROOT to `**/workspace/{folder created within the folder where git  is cloned}**`.
+Set LOCAL_ROOT to `**/workspace/{folder created within the folder where git is cloned}**`.
 
 === Launch "**Visualization**"
 It is the setting value of [settings.ts] under [src/common], and the startup method differs depending on the usage environment.
 |===
 |settings.ts settings|How to start it in the Docker container|How to start it in other environments
-|SERVICE.Console|<<#_DockerExec,When not to use "Local Storage".>>|<<#_OtherExec,How to start it in other environments>>
-|SERVICE.Azure|<<#_DockerExec,When not to use "Local Storage".>>|<<#_OtherExec,How to start it in other environments>>
-|SERVICE.Local|<<#_DockerExec,When using "Local Storage".>>|<<#_OtherExec,How to start it in other environments>>
+|SERVICE.Console|<<#_DockerExec,When not to use Local Storage.>>|<<#_OtherExec,How to start it in other environments>>
+|SERVICE.Azure|<<#_DockerExec,When not to use Local Storage.>>|<<#_OtherExec,How to start it in other environments>>
+|SERVICE.AWS|<<#_DockerExec,When not to use Local Storage.>>|<<#_OtherExec,How to start it in other environments>>
+|SERVICE.Local|<<#_DockerExec,When using Local Storage.>>|<<#_OtherExec,How to start it in other environments>>
 |===
 
 [#_DockerExec]
@@ -281,7 +346,7 @@ It is the setting value of [settings.ts] under [src/common], and the startup met
 
 . Run the following command in the terminal
 +
-When not to use "Local Storage"
+When not to use Local Storage
 +
 [source, Bash]
 ----
@@ -289,7 +354,7 @@ docker build . -t visualization-app
 docker run -p 3000:3000 -d visualization-app
 ----
 +
-When using "Local Storage"
+When using Local Storage
 +
 [source, Bash]
 ----
@@ -317,7 +382,7 @@ docker build . -t visualization-app
 
 [#_OtherExec]
 ==== How to launch in other environments
-. Launch terminal in Codespaces or a directory cloned from the **Visualization** repository
+. Launch terminal in Codespaces or a directory cloned from the "**Visualization**" repository
 . Run the following command to install the packages needed for the cloned "**Visualization**": (No need for Codespaces since they are automatically installed)
 +
 [source, Bash]
@@ -338,7 +403,7 @@ npm run start
 Access "**Visualization**" from your browser and perform various operations.
 
 . Open http://localhost:3000 (For Codespaces, the port forwarded URL) in your browser 
-
++
 NOTE: If you have changed the port number at launching, you will not be able to access it. 
 Replace 3000 in the URL with the changed port number.
 
@@ -366,24 +431,24 @@ To save data、go to <<#_SaveData,"Save data">>. +
 * Select the [**Object Detection**] tab at the top left of the screen + 
 By selecting the [**Object Detection**] tab, you can display inference results using the AI model of Object Detection.
 +
-image::ObjectDetectionAITask.png[alt="Object Detection display items", width="600"]
+image::images/ObjectDetectionAITask.png[alt="Object Detection display items", width="600"]
 The function of each display part is as follows:
 +
 |===
 |Display part |Function 
 
 |[**Display Setting**] button at the top of the screen
-|Opens the inference results display settings dialog
+|Opens the inference results display settings dialog.
 
 |Image display area in the upper half of the screen
-|Inference results are overlaid on the image taken by the edge AI device and displayed
+|Inference results are overlaid on the image taken by the Edge Device and displayed
 
 |[**Inference Result**] at the bottom left of the screen
 |Displays the raw data for the inference results fetched from the destination location as specified by the user.
 |[**Label Setting**] at the bottom right of the screen
 |You can list and edit the labels used to display inference results.
 |[**Import Labels**] at the bottom of the screen
-|Loads and displays the label file saved in the local.
+|Loads and displays the label file saved in the Local.
 |[**Export Labels**] at the bottom of the screen
 |Saves the displayed label information locally. + 
 To learn how to edit labels, see <<#_Label-setting, "Change the label settings">>
@@ -396,17 +461,17 @@ To learn how to edit labels, see <<#_Label-setting, "Change the label settings">
 * Select the [**Classification**] tab at the top left of the screen + 
 By selecting the [**Classification**] tab, you can display inference results using the AI model of Classification.
 +
-image::ClassificationAITask.png[alt="Classification display items", width="600"]
+image::images/ClassificationAITask.png[alt="Classification display items", width="600"]
 The function of each display part is as follows:
 +
 |===
 |Display part |Function 
 
 |[**Display Setting**] button at the top of the screen
-|Opens the inference results display settings dialog
+|Opens the inference results display settings dialog.
 
 |Image display area in the upper half of the screen
-|Inference results are overlaid on the image taken by the edge AI device and displayed. + 
+|Inference results are overlaid on the image taken by the Edge Device and displayed. + 
 The list on the right displays labels being inferred with the score.
 
 |[**Inference Result**] at the bottom left of the screen
@@ -414,10 +479,10 @@ The list on the right displays labels being inferred with the score.
 |[**Label Setting**] at the bottom right of the screen
 |You can list and edit the labels used to display inference results.
 |[**Import Labels**] at the bottom of the screen
-|Loads and displays the label file saved in the local.
+|Loads and displays the label file saved in the Local.
 |[**Export Labels**] at the bottom of the screen
 |Saves the displayed label information locally. +
-To learn how to edit labels, see <<#_Label-setting, "Change the label settings">>
+To learn how to edit labels, see <<#_Label-setting, "Change the label settings">>.
 |===
 +
 [NOTE]
@@ -431,7 +496,7 @@ In that case, set the AI Task to [**Classification**].
 * Select the [**Segmentation**] tab at the top left of the screen + 
 By selecting the [**Segmentation**] tab, you can display inference results using the AI model of Segmentation.
 +
-image::SegmentationAITask.png[alt="Segmentation display items", width="600"]
+image::images/SegmentationAITask.png[alt="Segmentation display items", width="600"]
 The function of each display part is as follows:
 +
 |===
@@ -441,7 +506,7 @@ The function of each display part is as follows:
 |Opens the inference results display settings dialog.
 
 |Image display area in the upper half of the screen
-|Inference results are overlaid on the image taken by the edge AI device and displayed.
+|Inference results are overlaid on the image taken by the Edge Device and displayed.
 The list on the right displays labels being inferred with the score.
 |[**Inference Result**] at the bottom left of the screen
 |Displays the raw data of the inference results fetched from the destination location as specified by the user. 
@@ -466,10 +531,10 @@ The setting range is 0 to the final ID of the label table, and the maximum value
 |[**Delete Label**] button at the bottom of the screen
 |Deletes a label at the position selected in the left drop-down.
 |[**Import Labels**] at the bottom of the screen
-|Loads and displays the label file saved in the local.
+|Loads and displays the label file saved in the Local.
 |[**Export Labels**] at the bottom of the screen
 |Saves the displayed label information locally. +
-To learn how to edit labels, see <<#_Label-setting, "Change the label settings">>
+To learn how to edit labels, see <<#_Label-setting, "Change the label settings">>.
 |===
 
 
@@ -482,7 +547,7 @@ To learn how to edit labels, see <<#_Label-setting, "Change the label settings">
 
 * [**Object Detection**]
 + 
-image::ObjectDetectionDisplaySetting.png[alt="Display Setting for Object Detection", width="600"]
+image::images/ObjectDetectionDisplaySetting.png[alt="Display Setting for Object Detection", width="600"]
 + 
 The meaning of each parameter is as follows:
 + 
@@ -496,7 +561,7 @@ The meaning of each parameter is as follows:
 
 * [**Classification**]
 + 
-image::ClassificationDisplaySetting.png[alt="Display Setting for Classification", width="600"]
+image::images/ClassificationDisplaySetting.png[alt="Display Setting for Classification", width="600"]
 + 
 The meaning of each parameter is as follows:
 + 
@@ -516,7 +581,7 @@ The meaning of each parameter is as follows:
 
 * [**Segmentation**]
 + 
-image::SegmentationDisplaySetting.png[alt="Display Setting for Segmentation", width="600"]
+image::images/SegmentationDisplaySetting.png[alt="Display Setting for Segmentation", width="600"]
 +
 The meaning of each parameter is as follows:
 + 
@@ -536,11 +601,11 @@ You can change the labels that display on the image by editing the text box in [
 Write the labels in the order of the class IDs that the AI model identifies. + 
 For [**Object Detection**] and [**Classification**], you can set labels separated by line breaks.
 +
-image::LabelSetting.png[alt="Label settings for Object Detection and Classification", width="600"]
+image::images/LabelSetting.png[alt="Label settings for Object Detection and Classification", width="600"]
 +
 For [**Segmentation**], you can display or hide labels, change label names, and specify label colors. +
 +
-image::LabelSetting_Seg.png[alt="Label settings for Segmentation", width="600"]
+image::images/LabelSetting_Seg.png[alt="Label settings for Segmentation", width="600"]
 +
 
 In the preceding image sets the class IDs to "Apple", "Orange", and "Banana". +
@@ -604,7 +669,7 @@ Realtime Mode lets you visualize the latest inference results and images.
 . Set runtime parameters + 
 When Realtime Mode is selected, the right side of the screen switches to the following content: +
 +
-image::RealtimeModeSetting.png[alt="Realtime Mode display items", width="700"]
+image::images/RealtimeModeSetting.png[alt="Realtime Mode display items", width="700"]
 +
 The meaning of each parameter is as follows:
 +
@@ -612,29 +677,26 @@ The meaning of each parameter is as follows:
 |Parameter |Meaning 
 
 |[**Device Name**] drop-down list
-|Selects the Device Name of the edge AI device registered in the "**Console**"
+|Selects the Device Name of the Edge Device registered in the "**Console**"
 
 |[**Reload**] button
 |Reloads Device Name list +
-[**Device Name**] is left unselected after pressing the button
+[**Device Name**] is left unselected after pressing the button.
 
 |[**Polling Interval**] slider
 |Sets the polling interval at the time of fetching data from the destination connection location as specified by the user. +
 The polling interval is displayed numerically to the right of the slider.
 
 |[**Start Upload**]/[**Stop Upload**] button
-|Starts/Stops uploading images and inference results
-
-|[**Start Polling**]/[**Stop Polling**] button
-|Starts/stops fetching and displaying the latest image(s) and inference results from the destination connection location as specified by the user.
+|Starts/stops uploading images and inference results, fetching/displaying the latest image/inference results from the connection 
+destination specified by the user.
 
 |===
 +
 
-. Instruct the edge AI device to start inference + 
-Press the [**Start Upload**] to instruct the edge AI device to start inference. +
-Once the inference is initiated, it starts uploading the image(s) and inference results from Edge AI
-device to the connection destination location specified by the user.
+. Instruct the Edge Device to start inference + 
+Press the [**Start Upload**] to instruct the Edge Device to start inference. +
+Once the inference is initiated, it starts uploading the image(s) and inference results from Edge Device to the connection destination location specified by the user.
 
 . Start updating inference result display + 
 On clicking [**Start Polling**], it displays on the left-side of the screen the images and inference results that were uploaded to the destination location specified by the user. +
@@ -644,9 +706,9 @@ When the data acquisition time exceeds [**Polling Interval**], [**Stop Polling**
 . Stop updating inference result display + 
 Press [**Stop Polling**] to stop updating display and to stop fetching images, inference results from the destination location specified by the user.
 
-. Instruct the edge AI device to stop inference + 
-Press the [**Stop Upload**] to instruct the edge AI device to stop inference. +
-On stopping the inferences, it stops uploading the images, inference results from Edge AI device to the
+. Instruct the Edge Device to stop inference + 
+Press the [**Stop Upload**] to instruct the Edge Device to stop inference. +
+On stopping the inferences, it stops uploading the images, inference results from Edge Device to the
 destination location specified by the user.
 +
 [NOTE]
@@ -663,7 +725,7 @@ History Mode lets you visualize past inference results and images.
 . Set runtime parameters + 
 When History Mode is selected, the right side of the screen switches to the following content: +
 +
-image::HistoryModeSetting.png[alt="History Mode display items", width="700"]
+image::images/HistoryModeSetting.png[alt="History Mode display items", width="700"]
 +
 The meaning of each parameter is as follows:
 +
@@ -671,35 +733,35 @@ The meaning of each parameter is as follows:
 |Parameter |Meaning 
 
 |[**Device Name**] drop-down list
-|Selects the Device Name of the edge AI device registered in the "**Console**"
+|Selects the Device Name of the Edge Device registered in the "**Console**"
 
 |[**Reload**] button
 |Reloads Device Name list +
-[**Device Name**] is left unselected after pressing the button
+[**Device Name**] is left unselected after pressing the button.
 
 |[**Image Selection**] slider
-|Sets the index of the inference source image to start displaying +
-The index is displayed numerically to the right of the slider +
-When the value of the slider is changed, updates to inference source image with date and time tied to index
+|Sets the index of the inference source image to start displaying. +
+The index is displayed numerically to the right of the slider. +
+When the value of the slider is changed, updates to inference source image with date and time tied to index.
 
 |[**Sub Directory**] drop-down list
 |Selects the Sub Directory of images stored in the destination connection location specified by the user.
 
 |[**Interval Time**] slider
-|Sets the playing interval when updating inference source images +
-The playing interval is displayed numerically to the right of the slider
+|Sets the playing interval when updating inference source images. +
+The playing interval is displayed numerically to the right of the slider.
 
 |[**Start Playing**]/[**Stop Playing**] button
-|Starts/Stops updating inference source images
+|Starts/Stops updating inference source images.
 
 |[**Save Data**] button
-|Displays Save Data menu
+|Displays Save Data menu.
 |===
 +
 
 . Start displaying inference results + 
 Press the [**Start Playing**] to display images and inference results in the directory selected by the [**Sub Directory**] on the left side of the screen. + 
-The display is sequentially updated at intervals set by [**Interval Time**] from the index set by [**Image Selection**].  +
+The display is sequentially updated at intervals set by [**Interval Time**] from the index set by [**Image Selection**]. +
 When the data acquisition time exceeds [**Interval Time**], [**Stop Playing**] is automatically executed. 
 . Stop displaying inference results + 
 Pressing the [**Stop Upload**] stops display updates. + 
@@ -709,7 +771,7 @@ Pressing the [**Stop Upload**] stops display updates. +
 . Press the [**Save Data**] button in [**History Mode**] to display Save Data menu. + 
 The [**Save Data**] button can be pressed by specifying the [**Device Name**] and [**Sub Directory**].
 +
-image::SaveDialog.png[alt="Display items in the Save Data menu", width="600"]
+image::images/SaveDialog.png[alt="Display items in the Save Data menu", width="600"]
 +
 The meaning of each parameter is as follows:
 +
@@ -729,7 +791,7 @@ The save process is started by specifying where to save. +
 |===
 . Set each parameter and press the [**Save**] button.
 . Set where to save and press the [**Save**] button to start the save process.
-. A progress bar displays during the save process.  +
+. A progress bar displays during the save process. +
 . When the save process is complete, the data is saved to the specified destination. 
 
 
@@ -738,9 +800,10 @@ By customizing "**Visualization**", you can visualize inference results using yo
 For customization procedures, see link:CloudSDK_CustomizeGuideline_Visualization.adoc[**"Cloud SDK Visualization Customization Guidelines"**].
 
 == Assumption/Restriction
-*  In some environments, setting a label name other than half-width alphanumeric characters may result in garbled characters when saving images.
+* In some environments, setting a label name other than half-width alphanumeric characters may result in garbled characters when saving images.
 * If there are more than 1000 images in a subdirectory in History Mode or Realtime Mode, the playback order of the images may be disturbed.
+* When ``**SERVICE.Console**`` is specified for CONNECTION_DESTINATION, only images and inference results up to 10 hours after the inference start time can be acquired in History Mode.
 
 
-=== About AI Models supported by "**Visualization**"
+=== About AI models supported by "**Visualization**"
 The supported AI models are Object Detection, Classification, and Semantic Segmentation.

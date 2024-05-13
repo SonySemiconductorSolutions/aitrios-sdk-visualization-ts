@@ -20,20 +20,24 @@ import { getSubDirectoryList } from '../../../hooks/getStorageData'
 /**
  * Uses Console to get Subdirectory of deviceId
  *
- * @param deviceId The id of the device to get uploading image data.
+ * @param deviceId The id of the Edge Device to get uploading image data.
  *
  * @returns subDirectory list . Ex:['20220120','20220121','20220122']
  */
 const getsubDirectoryList = async (deviceId: string) => {
-  const response = await getSubDirectoryList(deviceId)
-  return response
+  try {
+    const response = await getSubDirectoryList(deviceId)
+    return response
+  } catch (err: any) {
+    throw new Error(JSON.stringify({ message: err.message }))
+  }
 }
 
 /**
  * Get image data as defined by the query parameter.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  *
  * @param res Response
  * subDirectory list: List of subdirectories where inference source images are stored

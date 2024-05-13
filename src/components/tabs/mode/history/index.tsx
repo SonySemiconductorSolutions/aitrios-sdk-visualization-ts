@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import React, { useEffect, useRef, useState } from 'react'
-import { ErrorData, handleResponseErr, SegmentationLabelType, DeviceListData } from '../../../../hooks/util'
-import { HISTORY_MODE } from '../../../../pages'
+import React, { useEffect, useRef, useState, useContext, useCallback } from 'react'
+import { ErrorData, handleResponseErr, SegmentationLabelType, DisplaySetting } from '../../../../hooks/util'
+import { HISTORY_MODE, MIN_INTERVAL_SEC, MAX_INTERVAL_SEC, STEP_INTERVAL_SEC, MIN_HISH_FPS_INTERVAL_SEC, STEP_HISH_FPS_INTERVAL_SEC } from '../../../../common/constants'
 import DefaultButton from '../../../common/button/defaultbutton'
 import StartPlayingSVG from '../../../common/button/defaultbutton/startplaying-svg'
 import StopPlayingSVG from '../../../common/button/defaultbutton/stopplaying-svg'
@@ -26,116 +26,72 @@ import CustomSlider from '../../../common/slider'
 import ImageSVG from '../../../common/slider/image-svg'
 import TimerSVG from '../../../common/slider/timer-svg'
 import styles from './history.module.scss'
+import { UserContext } from '../../../../hooks/context'
+import { State, Action } from '../../../../hooks/reducer'
+import { CONNECTION_DESTINATION, SERVICE } from '../../../../common/settings'
 
 type HistoryProps = {
   deviceId: string
-  setDeviceId: (deviceId: string) => void
-  deviceIdList: DeviceListData
-  setDeviceIdList: (deviceListData: DeviceListData) => void
-  isPlaying: boolean
-  mode: string
-  intervalTimeValue: number
-  subDirectory: string
-  imageCount: number
-  totalCount: number
-  isFirst: boolean
-  displayCount: number
-  setIsPlaying: (playing: boolean) => void
-  setSubDirectory: (subDirectory: string) => void
-  setImageCount: (currValue: number) => void
-  setTotalCount: (totalImageCount: number) => void
-  setIntervalTimeValue: (interval: number) => void
-  setLoadingDialogFlg: (display: boolean) => void
-  setIsFirst: (isFirst: boolean) => void
-  setDisplayCount: (displayCount: number) => void
-  aiTask: string
-  labelDataOD:string[]
-  labelDataCLS:string[]
+  labelDataOD: string[]
+  labelDataCLS: string[]
   labelDataSEG: SegmentationLabelType[]
-  isDisplayTs:boolean
-  probability:number
-  isOverlayIR:boolean
-  overlayIRC:string
-  transparency: number
-}
-
-function getSubdirectoryList (props: HistoryProps, setSubDirectoryList: React.Dispatch<React.SetStateAction<string[]>>) {
-  (async () => {
-    setSubDirectoryList([])
-    props.setSubDirectory('')
-    if (props.deviceId && props.mode === HISTORY_MODE) {
-      props.setLoadingDialogFlg(true)
-      const res = await fetch(`/api/subDirectoryList/${props.deviceId}`, { method: 'GET' })
-      props.setLoadingDialogFlg(false)
-      if (res.status === 200) {
-        await res.json().then((data) => {
-          if (data.length === 0) {
-            return window.alert('Sub Directory not found.')
-          }
-          setSubDirectoryList(data)
-        })
-      } else {
-        const errorMessage: ErrorData = await res.json()
-        handleResponseErr(errorMessage)
-      }
-    }
-  })()
+  displaySetting: DisplaySetting
+  state: State
+  dispatch: React.Dispatch<Action>
 }
 
 export default function History (props: HistoryProps) {
+  const { aiTask, mode, setLoadingDialogFlg } = useContext(UserContext)
   const [subDirectoryList, setSubDirectoryList] = useState<string[]>([])
   const totalCountRenderFlgRef = useRef(false)
 
-  useEffect(() => {
-    if (props.mode === HISTORY_MODE) {
-      if (Object.keys(props.deviceIdList).length === 0) {
-        (async () => {
-          props.setDeviceId('')
-          props.setDeviceIdList({})
-          props.setLoadingDialogFlg(true)
-          const res = await fetch('/api/deviceInfo/deviceInfo', { method: 'GET' })
-          props.setLoadingDialogFlg(false)
-          if (res.status === 200) {
-            await res.json().then((data) => {
-              if (Object.keys(data).length === 0) {
-                return window.alert('Connected device not found.')
-              }
-              props.setDeviceIdList(data)
-            })
-          } else {
-            const errorMessage: ErrorData = await res.json()
-            handleResponseErr(errorMessage)
-          }
-        })()
+  const getSubdirectoryList = () => {
+    (async () => {
+      setSubDirectoryList([])
+      props.dispatch({ type: 'setImagePath', payload: { imagePath: '' } })
+      if (props.deviceId && mode === HISTORY_MODE) {
+        setLoadingDialogFlg(true)
+        const res = await fetch(`/api/subDirectoryList/${props.deviceId}`, { method: 'GET' })
+        setLoadingDialogFlg(false)
+        if (res.status === 200) {
+          await res.json().then((data) => {
+            if (data.length === 0) {
+              return window.alert('Sub Directory not found.')
+            }
+            setSubDirectoryList(data)
+          })
+        } else {
+          const errorMessage: ErrorData = await res.json()
+          handleResponseErr(errorMessage)
+        }
       }
-      getSubdirectoryList(props, setSubDirectoryList)
-    }
-  }, [props.mode])
+    })()
+  }
 
   useEffect(() => {
-    getSubdirectoryList(props, setSubDirectoryList)
-  }, [props.deviceId])
+    if (mode === HISTORY_MODE) {
+      getSubdirectoryList()
+    }
+  }, [props.deviceId, mode])
 
   useEffect(() => {
-    if (props.mode === HISTORY_MODE && !props.isPlaying) {
-      props.setIsFirst(true)
+    if (mode === HISTORY_MODE && !props.state.isPlaying) {
+      props.dispatch({ type: 'clearFirst' })
     }
-  }, [props.isPlaying])
+  }, [props.state.isPlaying])
 
   useEffect(() => {
     (async () => {
-      if (props.deviceId && props.subDirectory && totalCountRenderFlgRef.current && props.mode === HISTORY_MODE) {
-        props.setLoadingDialogFlg(true)
-        const res = await fetch(`/api/totalImageCount/${props.deviceId}?subDirectory=${props.subDirectory}`, { method: 'GET' })
-        props.setLoadingDialogFlg(false)
+      if (props.deviceId && props.state.imagePath && totalCountRenderFlgRef.current && mode === HISTORY_MODE) {
+        setLoadingDialogFlg(true)
+        const res = await fetch(`/api/totalImageCount/${props.deviceId}?subDirectory=${props.state.imagePath}`, { method: 'GET' })
+        setLoadingDialogFlg(false)
         if (res.status === 200) {
           await res.json().then((data) => {
             if (data.totalImageCount === 0) {
               return window.alert('No images in subdirectory')
             }
-            props.setImageCount(0)
-            props.setDisplayCount(0)
-            props.setTotalCount(data.totalImageCount)
+            props.dispatch({ type: 'setTotalCount', payload: { totalCount: data.totalImageCount } })
           })
         } else {
           const errorMessage: ErrorData = await res.json()
@@ -145,7 +101,19 @@ export default function History (props: HistoryProps) {
         totalCountRenderFlgRef.current = true
       }
     })()
-  }, [props.subDirectory])
+  }, [props.state.imagePath])
+
+  const handleUpdateDisplayCount = useCallback((currValue: number) => {
+    props.dispatch({ type: 'setDisplayCount', payload: { displayCount: currValue } })
+  }, [])
+
+  const handleUpdateInterval = useCallback((currValue: number) => {
+    props.dispatch({ type: 'setIntervalTimeValue', payload: { intervalTimeValue: currValue } })
+  }, [])
+
+  const handleUpdateImagePath = useCallback((value: string) => {
+    props.dispatch({ type: 'setImagePath', payload: { imagePath: value } })
+  }, [])
 
   return (
     <div>
@@ -157,23 +125,25 @@ export default function History (props: HistoryProps) {
           Sub Directory
           <DropDownList
             id={'subdirectory-list'}
-            name={'subDirectory'} className={props.isPlaying ? styles.disabled : styles.select}
+            name={'subDirectory'} className={props.state.isPlaying ? styles.disabled : styles.select}
             list={subDirectoryList}
-            onChange={(event) => { props.setSubDirectory(event.target.value) }}
-            disabled={props.isPlaying}
-            defaultSpace= {true}
+            onChange={(event) => {
+              handleUpdateImagePath(event.target.value)
+            }}
+            disabled={props.state.isPlaying}
+            defaultSpace={true}
           />
         </div>
         <div className={styles['image-selection-slider']}>
           <CustomSlider
             icon={<ImageSVG />}
-            isPlaying={props.isPlaying}
-            currValue={props.displayCount}
-            setCurrValue={props.setDisplayCount}
-            max={props.totalCount - 1}
+            isPlaying={props.state.isPlaying}
+            currValue={props.state.displayCount}
+            setCurrValue={handleUpdateDisplayCount}
+            max={props.state.totalCount - 1}
           />
           <div className={styles['unit-area']}>
-            {` ${props.displayCount + 1} `}
+            {` ${props.state.displayCount + 1} `}
           </div>
         </div>
       </div>
@@ -182,43 +152,48 @@ export default function History (props: HistoryProps) {
           Interval Time (seconds)
           <div className={styles['interval-slider']}>
             <CustomSlider icon={<TimerSVG />}
-              isPlaying={props.isPlaying}
-              currValue={props.intervalTimeValue}
-              setCurrValue={props.setIntervalTimeValue}
-              min={10}
-              max={120}
+              isPlaying={props.state.isPlaying}
+              currValue={props.state.intervalTimeValue}
+              setCurrValue={handleUpdateInterval}
+              min={CONNECTION_DESTINATION === SERVICE.Local ? MIN_HISH_FPS_INTERVAL_SEC : MIN_INTERVAL_SEC}
+              max={MAX_INTERVAL_SEC}
+              step={CONNECTION_DESTINATION === SERVICE.Local ? STEP_HISH_FPS_INTERVAL_SEC : STEP_INTERVAL_SEC}
             />
             <div className={styles['unit-area']}>
-              {`${props.intervalTimeValue} sec`}
+              {`${props.state.intervalTimeValue} sec`}
             </div>
           </div>
         </div>
         <div className={styles['items-container']}>
           <DefaultButton isLoading={false}
-            icon={!props.isPlaying ? <StartPlayingSVG /> : <StopPlayingSVG />}
-            text={!props.isPlaying ? 'Start Playing' : 'Stop Playing'}
-            disabled={!props.subDirectory}
+            icon={!props.state.isPlaying ? <StartPlayingSVG /> : <StopPlayingSVG />}
+            text={!props.state.isPlaying ? 'Start Playing' : 'Stop Playing'}
+            disabled={!props.state.imagePath}
             action={() => {
-              props.setLoadingDialogFlg(true)
-              props.setImageCount(props.displayCount)
-              props.setIsPlaying(!props.isPlaying)
+              setLoadingDialogFlg(true)
+              if (!props.state.isPlaying) {
+                props.dispatch({ type: 'startPlayingHistory' })
+              } else {
+                props.dispatch({ type: 'stopPlayingHistory' })
+              }
             }
             } />
         </div>
         <div className={styles['items-container']}>
           <SaveMenu
             deviceId={props.deviceId}
-            max={props.totalCount}
-            subDirectory={props.subDirectory}
-            aiTask={props.aiTask}
+            max={props.state.totalCount}
+            subDirectory={props.state.imagePath}
+            isPlaying={props.state.isPlaying}
+            aiTask={aiTask}
             labelDataOD={props.labelDataOD}
             labelDataCLS={props.labelDataCLS}
             labelDataSEG={props.labelDataSEG}
-            isDisplayTs={props.isDisplayTs}
-            probability={props.probability}
-            isOverlayIR={props.isOverlayIR}
-            overlayIRC={props.overlayIRC}
-            transparency={props.transparency}
+            isDisplayTs={props.displaySetting.isDisplayTs}
+            probability={props.displaySetting.probability}
+            isOverlayIR={props.displaySetting.isOverlayIR}
+            overlayIRC={props.displaySetting.overlayIRC}
+            transparency={props.displaySetting.transparency}
           />
         </div>
       </div>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../..'
+import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../../../common/constants'
 import { deserialize } from '../../../hooks/deserialize/deserializeFunction'
-import { saveInference, WORK_DIR, getTimestampFromImageFIleName } from '../../../hooks/fileUtil'
+import { saveInference, WORK_DIR, getTimestampFromImageFileName } from '../../../hooks/fileUtil'
 import { getDateDecrement, getDateIncrement } from '../../../hooks/util'
 import * as path from 'path'
 import { getInference } from '../../../hooks/getStorageData'
@@ -34,7 +34,7 @@ import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
 /**
  * Uses Console to get inference data and save it.
  *
- * @param deviceId The id of the device to get uploading image data.
+ * @param deviceId The id of the Edge Device to get uploading image data.
  * @param subDirectory the image data's subdirectory name.
  * @param aiTask The model of the used AI model type.
 
@@ -46,7 +46,7 @@ async function getSaveInference (deviceId: string, subDirectory: string, aiTask:
   let timestampList
   try {
     saveDirPath = path.join(WORK_DIR, deviceId, subDirectory)
-    timestampList = getTimestampFromImageFIleName(saveDirPath)
+    timestampList = getTimestampFromImageFileName(saveDirPath)
     timestampList.sort()
   } catch (err) {
     throw new Error(JSON.stringify({ message: 'Fail to get timestamp list.' }))
@@ -56,7 +56,7 @@ async function getSaveInference (deviceId: string, subDirectory: string, aiTask:
   const procCount = Math.ceil(timestampList.length / (maxNumberOfGetInference / 2))
   for (let i = 0; i < procCount; i++) {
     const execList = timestampList.slice(i * (maxNumberOfGetInference / 2), (i + 1) * (maxNumberOfGetInference / 2))
-    const response = await getInference(deviceId, subDirectory, getDateDecrement(execList[0]), getDateIncrement(timestampList[execList.length - 1]), maxNumberOfGetInference)
+    const response = await getInference(deviceId, subDirectory, getDateDecrement(execList[0]), getDateIncrement(execList[execList.length - 1]), maxNumberOfGetInference)
     if (!response) {
       throw new Error(JSON.stringify({ message: errorMsg }))
     }
@@ -125,7 +125,7 @@ async function getSaveInference (deviceId: string, subDirectory: string, aiTask:
  * Get inference data as defined by the query parameter.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  * subDirectory: image data's subdirectory name.
  * aiTask: The model of the used AI model type.
  *

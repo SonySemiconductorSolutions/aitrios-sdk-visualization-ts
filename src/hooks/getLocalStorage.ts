@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,17 @@ type getImageFromLocalResult = {
     contents: string
   }[]
 }
-export async function getImageFromLocal (retryCount: number, deviceId: string, subDirectory: string, orderBy?: string, skip?:number, numberOfImages?: number) :Promise<getImageFromLocalResult> {
+
+type getSpecifiedImageFromLocalResult = {
+  images: {
+    name: string,
+    contents: string
+  }[]
+}
+
+const LOCAL_WAIT_TIME = 50
+
+export async function getImageFromLocal (retryCount: number, deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number): Promise<getImageFromLocalResult> {
   const response: getImageFromLocalResult = {
     total_image_count: 0,
     images: []
@@ -66,8 +76,39 @@ export async function getImageFromLocal (retryCount: number, deviceId: string, s
     return response
   }
   if (retryCount > 0) {
-    await setTimeout(1000)
+    await setTimeout(LOCAL_WAIT_TIME)
     return getImageFromLocal(retryCount - 1, deviceId, subDirectory, orderBy, skip, numberOfImages)
+  }
+  return response
+}
+
+export async function getSpecifiedImageFromLocal (retryCount: number, timestamp: string): Promise<getSpecifiedImageFromLocalResult> {
+  const response: getSpecifiedImageFromLocalResult = {
+    images: []
+  }
+  const images: any = []
+  const fileName = timestamp + '.jpg'
+  const filePath = path.join(LOCAL_ROOT, 'image', fileName)
+  try {
+    isStoragePathFile(filePath)
+  } catch (err) {
+    if (retryCount > 0) {
+      await setTimeout(LOCAL_WAIT_TIME)
+      return getSpecifiedImageFromLocal(retryCount - 1, timestamp)
+    } else {
+      throw err
+    }
+  }
+  isRelativePath(filePath)
+  isSymbolicLinkFile(filePath)
+  const base64Image = fs.readFileSync(filePath, 'base64')
+  images.push({
+    name: fileName,
+    contents: base64Image
+  })
+
+  if (images.length !== 0) {
+    response.images = images
   }
   return response
 }
@@ -82,7 +123,7 @@ export async function getInferenceFromLocal (retryCount: number, deviceId: strin
   for (const fileName of inferencesFiles) {
     const timestamp = path.basename(fileName, '.txt')
     if ((startInferenceTime === undefined || timestamp >= startInferenceTime) &&
-        (endInferenceTime === undefined || timestamp < endInferenceTime)) {
+      (endInferenceTime === undefined || timestamp < endInferenceTime)) {
       const inferenceFilePath = path.join(LOCAL_ROOT, deviceId, 'meta', subDirectory, fileName)
       isSymbolicLinkFile(inferenceFilePath)
       const inferenceData = fs.readFileSync(inferenceFilePath, 'utf8')
@@ -95,8 +136,36 @@ export async function getInferenceFromLocal (retryCount: number, deviceId: strin
   }
   if (serializeDatas.length !== 0) return serializeDatas
   if (retryCount > 0) {
-    await setTimeout(1000)
+    await setTimeout(LOCAL_WAIT_TIME)
     return getInferenceFromLocal(retryCount - 1, deviceId, subDirectory, startInferenceTime, endInferenceTime, numberOfInferenceResult)
+  }
+  return serializeDatas
+}
+
+export async function getLatestInferenceFromLocal (retryCount: number): Promise<any[]> {
+  const serializeDatas: string[] = []
+  const storagePath = path.join(LOCAL_ROOT, 'meta')
+  isRelativePath(storagePath)
+  isStoragePathFile(storagePath)
+  const inferencesFiles = fs.readdirSync(storagePath)
+  let latestFileName: string = ''
+  if (inferencesFiles.length > 0) {
+    latestFileName = inferencesFiles[0]
+    inferencesFiles.forEach((file) => {
+      if (file.localeCompare(latestFileName, undefined, { numeric: true, sensitivity: 'base' })) {
+        latestFileName = file
+      }
+    })
+  }
+  if (latestFileName !== '') {
+    const inferenceData = fs.readFileSync(path.join(storagePath, latestFileName), 'utf8')
+    const json = JSON.parse(inferenceData)
+    serializeDatas.push(json)
+    return serializeDatas
+  }
+  if (retryCount > 0) {
+    await setTimeout(LOCAL_WAIT_TIME)
+    return getLatestInferenceFromLocal(retryCount - 1)
   }
   return serializeDatas
 }

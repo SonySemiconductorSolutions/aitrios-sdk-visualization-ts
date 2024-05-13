@@ -1,11 +1,11 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *  http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-export const SERVICE = {
-  Console: 'console',
-  Azure: 'azure',
-  AWS: 'aws',
-  Local: 'local'
-} as const
-type SERVICE_TYPE = typeof SERVICE[keyof typeof SERVICE];
+import { createContext } from 'react'
+import { AiTaskTabType, ModeTabType } from '../common/constants'
 
-export const CONNECTION_DESTINATION: SERVICE_TYPE = SERVICE.Console
-export const LOCAL_ROOT = ''
+type UserContextType = {
+    aiTask: AiTaskTabType,
+    mode: ModeTabType,
+    setIsLoading: (value: boolean) => void,
+    setLoadingDialogFlg: (value: boolean) => void
+}
+
+export const UserContext = createContext<UserContextType>({} as UserContextType)
