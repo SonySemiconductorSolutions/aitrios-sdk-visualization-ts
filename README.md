@@ -22,7 +22,7 @@ This repository provides "**Cloud SDK Visualization**" to check inference result
 
 ## Getting Started
 
-See the ["**SDK Getting Started**"](https://developer.aitrios.sony-semicon.com/en/downloads#sdk-getting-started).
+See the ["**SDK Getting Started**"](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/sdk-getting-started/).
 
 ## Tutorials
 You can use tutorial to experience how to use "**Cloud SDK Visualization**".
@@ -33,13 +33,13 @@ See the ["**Cloud SDK Visualization Tutorial**"](./docs/development-docs/CloudSD
 - ["**Cloud SDK Visualization Functional Specifications**"](./docs/development-docs/CloudSDK_FuncSpec_Visualization.adoc)
 
 ## Get support
-- [Contact us](https://developer.aitrios.sony-semicon.com/en/contact-us-en)
+- [Contact us](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/contact-us/)
 
 ## See also
 - ["**Developer Site**"](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/)
 
 ## Trademark
-- ["**Read This First**"](https://developer.aitrios.sony-semicon.com/en/documents/read-this-first)
+- ["**Read This First**"](https://developer.aitrios.sony-semicon.com/en/edge-ai-sensing/documents/read-this-first/)
 
 ## Versioning
 

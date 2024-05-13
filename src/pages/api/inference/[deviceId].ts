@@ -15,7 +15,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next'
-import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../..'
+import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION, REALTIME_MODE } from '../../../common/constants'
 import { getDateDecrement, getDateIncrement } from '../../../hooks/util'
 import { deserialize } from '../../../hooks/deserialize/deserializeFunction'
 import { getInference } from '../../../hooks/getStorageData'
@@ -23,7 +23,7 @@ import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
 /**
  * Uses get inference data, and deserialize
  *
- * @param deviceId The id of the device to get uploading inference data.
+ * @param deviceId The id of the Edge Device to get uploading inference data.
  * @param subDirectory The Subdirectory where the acquired inferred source images are stored.
  * @param timestamp The time of the inference data is retrieved.
  * @param aiTask The model of the used AI model type.
@@ -32,17 +32,13 @@ import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
  * @returns an object. Ex: [{"1":{...}, "2"{...}, ...,}]
  */
 const getInferenceResults = async (deviceId: string, subDirectory: string, timestamp: string, aiTask: string, mode: string) => {
-  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && mode === 'realtimeMode') {
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && mode === REALTIME_MODE) {
     deviceId = ''
     subDirectory = ''
   }
   const response = await getInference(deviceId, subDirectory, getDateDecrement(timestamp), getDateIncrement(timestamp))
   const errorMsg = 'Cannot get inferences.'
-  try {
-    if (response?.length === 0 || !response) {
-      throw new Error(JSON.stringify({ message: errorMsg }))
-    }
-  } catch (e) {
+  if (response?.length === 0 || !response) {
     throw new Error(JSON.stringify({ message: errorMsg }))
   }
 
@@ -96,7 +92,7 @@ const getInferenceResults = async (deviceId: string, subDirectory: string, times
  * Retrieves inference result items from Cosmos DB as defined by the query parameter.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  * timestamp: used filter on data related to the image
  * subDirectory: inference data's subdirectory name.
  * aiTask: Specify the AI model used  ex.'objectDetection'

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,7 +65,6 @@ function createImageFile (filePath: string, imageData: string) {
 function createInferencesFile (filePath: string, inferenceData: any) {
   try {
     fs.writeFileSync(filePath, segStringify(inferenceData))
-    console.log(`Inference Data save in ${filePath}`)
   } catch (err) {
     console.error((err as Error).message)
     throw new Error(JSON.stringify({ message: 'Fail to create Inference file.' }))
@@ -86,13 +85,10 @@ export const createZipFile = async (zipDirPath: string, zipFileName: string, sub
   }
 }
 
-export const readZipFileData = () => {
-  try {
-    const filePath = fs.readdirSync(WORK_DIR)[0]
-    return fs.readFileSync(path.join(WORK_DIR, filePath))
-  } catch (err) {
-    throw new Error(JSON.stringify({ message: 'Failed get zip data.' }))
-  }
+export const getZipFileName = () => {
+  const fileName = fs.readdirSync(WORK_DIR)[0]
+  const filePath = path.join(WORK_DIR, fileName)
+  return filePath
 }
 
 const readFiles = (files: Zippable, targetPath: string, saveDir: string) => {
@@ -108,7 +104,7 @@ const readFiles = (files: Zippable, targetPath: string, saveDir: string) => {
   })
 }
 
-export const getTimestampFromImageFIleName = (dir: string) => {
+export const getTimestampFromImageFileName = (dir: string) => {
   try {
     const fileNameList = fs.readdirSync(dir)
     const imgFileNames = fileNameList
@@ -149,4 +145,12 @@ export function isFile (filePath: string) {
     throw new Error(JSON.stringify({ message: `${fileName} file is not exist.` }))
   }
   return true
+}
+
+export function checkExt (filePath: string) {
+  if (path.extname(filePath) === '.jpg') {
+    return true
+  } else {
+    throw new Error()
+  }
 }

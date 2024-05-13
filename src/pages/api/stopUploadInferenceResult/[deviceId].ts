@@ -22,9 +22,9 @@ import { isRelativePath, isStoragePathFile } from '../../../hooks/fileUtil'
 import { getConsoleService } from '../../../hooks/getConsoleStorage'
 
 /**
- * Uses Console to request that a device stop uploading inference data
+ * Uses Console to request that a Edge Device stop uploading inference data
  *
- * @param deviceId The id of the device to request that it stops uploading inference data.
+ * @param deviceId The id of the Edge Device to request that it stops uploading inference data.
  * @param subdirectory The Subdirectory where the acquired inferred source images are stored.
  * @returns an object containing information on whether or not the operation succeeded. Ex: { "result": "SUCCESS" } or { "result": "ERROR", "code": ..., "message": ..., "time": ... }
  */
@@ -80,10 +80,10 @@ const stopUploadInferenceResult = async (deviceId: string, subDirectory: string)
 }
 
 /**
- * Request that a device stop uploading inference data.
+ * Request that a Edge Device stop uploading inference data.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  * subDirectory: image and inference data's subdirectory name.
  *
  * @param res Response

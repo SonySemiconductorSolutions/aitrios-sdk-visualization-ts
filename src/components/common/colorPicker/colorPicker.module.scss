@@ -1,0 +1,25 @@
+.color-label {
+  width: 36px;
+  height: 14px;
+  border-radius: 2px;
+  // background: props.color
+}
+.color-button {
+  padding: 5px;
+  background: #fff;
+  border-radius: 1px;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.1);
+  display: inline-block;
+  cursor: pointer;
+}
+.label-popover {
+  position: absolute;
+  z-index: 2;
+}
+.label-cover {
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  bottom: 0px;
+  left: 0px
+}

@@ -17,11 +17,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 import { getImage } from '../../../hooks/getStorageData'
 import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
+import { HISTORY_MODE, REALTIME_MODE } from '../../../common/constants'
+import { checkExt } from '../../../hooks/fileUtil'
+import { utcToZonedTime } from 'date-fns-tz'
+import { format } from 'date-fns'
+import { convertDate } from '../../../hooks/util'
 
 /**
  * Uses Console to get uploading image data
  *
- * @param deviceId The id of the device to get uploading image data.
+ * @param deviceId The id of the Edge Device to get uploading image data.
  * @param imagePath The path of the storage for acquired images.
  * @param numberOfImages The number of the image data.
  * @param skip The number of the index to start getting.
@@ -31,18 +36,38 @@ import { CONNECTION_DESTINATION, SERVICE } from '../../../common/settings'
  * @returns an object . Ex: { "data": {"images": ["contents": ..., "name":...,]} } or { "result": "ERROR", "code": ..., "message": ..., "time": ... }
  */
 const getBlob = async (deviceId: string, imagePath: string, numberOfImages: number, skip: number, orderBy: string, mode: string) => {
-  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && mode === 'realtimeMode') {
+  if (CONNECTION_DESTINATION.toString() === SERVICE.Local && mode === REALTIME_MODE) {
     deviceId = ''
     imagePath = ''
   }
-
-  const response = await getImage(deviceId, imagePath, orderBy, skip, numberOfImages)
-  const errorMsg = 'Cannot get image.'
+  const errorMsg = 'Cannot get JPG image.'
+  let fromDatetime
+  let toDatetime
+  try {
+    const utcDate = utcToZonedTime(new Date(), 'UTC')
+    if (CONNECTION_DESTINATION.toString() === SERVICE.Console && mode === REALTIME_MODE) {
+      const notConvertedDate = new Date(utcDate.getTime() - 1 * 60 * 60 * 1000)
+      fromDatetime = format(notConvertedDate, 'yyyyMMddHHmm')
+    } else if (CONNECTION_DESTINATION.toString() === SERVICE.Console && mode === HISTORY_MODE) {
+      const convertedFromDate = convertDate(imagePath)
+      fromDatetime = format(convertedFromDate.getTime(), 'yyyyMMddHHmm')
+      const convertedToDate = new Date(convertedFromDate.getTime() + 10 * 60 * 60 * 1000)
+      const additionalToDatetime = format(convertedToDate, 'yyyyMMddHHmm')
+      const currentToDatetime = format(utcDate.getTime(), 'yyyyMMddHHmm')
+      toDatetime = additionalToDatetime < currentToDatetime ? additionalToDatetime : currentToDatetime
+    }
+  } catch (e) {
+    console.log(e)
+    throw new Error(JSON.stringify({ message: errorMsg }))
+  }
+  const response = await getImage(deviceId, imagePath, orderBy, skip, numberOfImages, fromDatetime, toDatetime)
   try {
     if (!response || response.images.length === 0) {
       throw new Error(JSON.stringify({ message: errorMsg }))
     }
+    checkExt(response.images[0].name)
   } catch (e) {
+    console.log(e)
     throw new Error(JSON.stringify({ message: errorMsg }))
   }
   const latestImage = response?.images[0]
@@ -57,7 +82,7 @@ const getBlob = async (deviceId: string, imagePath: string, numberOfImages: numb
  * Get image data as defined by the query parameter.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  * imagePath: image data's subdirectory name.
  * numberOfImages: get Image numbers. only use '1'
  * skip: Number of images to skip get.
@@ -65,7 +90,7 @@ const getBlob = async (deviceId: string, imagePath: string, numberOfImages: numb
  * mode: use 'realtimeMode' or 'historyMode'
  *
  * @param res Response
- * buff:get image contents data (base64 encode)
+ * buff: Get image contents data (base64 encode)
  * timestamp: image timestamp
  */
 export default async function handler (req: NextApiRequest, res: NextApiResponse) {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../../pages'
+import { CLASSIFICATION, OBJECT_DETECTION, SEGMENTATION } from '../../common/constants'
 import { deserializeClassification } from './deserializeClassification'
 import { deserializeObjectDetection } from './deserializeObjectDetection'
 import { deserializeSemanticSegmentation } from './deserializeSegmentation'

@@ -36,7 +36,7 @@ Segmentation対応 +
 
 |2023/06/06
 |DockerBuild対応 +
- サブディレクトリ内画像が1枚の場合の文言変更
+サブディレクトリ内画像が1枚の場合の文言変更
 
 |2023/06/20
 |画像数によって再生順が乱れる旨を追加
@@ -46,6 +46,13 @@ Segmentation対応 +
 
 |2023/12/22
 |Console Developer EditionとConsole Enterprise Edition対応
+
+|2024/03/27
+|Stop Uploadボタン押下時にエラーが発生した場合の対応方法を追加 +
+AWS対応 +
+StartPollingボタンをStartUploadボタンに集約する対応 +
+推論中のエッジデバイスに対して、StartPlayingを押下した時のエラー対応を追加 +
+Local Storage使用時のFPS改善対応
 
 |===
 
@@ -61,14 +68,14 @@ Segmentation対応 +
 |「**Console Access Library**」
 |「**Console for AITRIOS**」へのアクセス方法を提供するSDK
 
-|「**Console for AITRIOS**」 (以下、「**Console**」と記載)
-|エッジからクラウドを含めたソリューションを効率的に導入するための各種機能（デプロイメント機能、リトレーニング機能、エッジAIデバイスマネジメント機能など）を提供するクラウドサービス
+|「**Console for AITRIOS**」(以下、「**Console**」と記載)
+|エッジデバイスからクラウドを含めたソリューションを効率的に導入するための各種機能(デプロイメント機能、リトレーニング機能、エッジデバイスマネジメント機能など)を提供するクラウドサービス
 
 |推論結果
 |「**Edge Application**」からの出力のうち、AI処理されたメタデータ
 
 |画像
-|「**Edge Application**」からの出力のうち、エッジAIデバイスがとらえているイメージデータ
+|「**Edge Application**」からの出力のうち、エッジデバイスがとらえているイメージデータ
 
 |Azure Blob Storage
 |Microsoft社が提供するオブジェクトストレージ
@@ -77,9 +84,13 @@ Segmentation対応 +
 |ユーザーがサンプルアプリケーションを動作させるデバイスのストレージ
 
 |Local HTTP Server
-|エッジAIデバイスが出力するデータをLocal Storageに保存する際に起動するサーバー
+|エッジデバイスが出力するデータをLocal Storageに保存する際に起動するサーバー
+
+|Amazon S3
+|Amazonが提供するオブジェクトストレージ
+
 |===
-NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は同義です。
+
 
 == 参照資料
 * 「**Visualization**」で利用するTypeScript版「**Console Access Library**」
@@ -93,7 +104,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 
 
 == 想定ユースケース
-* ユーザーはリポジトリ内の「**Visualization**」を起動することで、エッジAIデバイスがUploadした推論結果の確認ができる。
+* ユーザーはリポジトリ内の「**Visualization**」を起動することで、エッジデバイスがUploadした推論結果の確認ができる。
 
 
 == 機能概要、アルゴリズム
@@ -102,11 +113,9 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 * Realtime Mode
 ** 最新データを「**Console**」または他のクラウドサービスやLocal Storageから取得、表示できる。
 ** Reloadボタンを押下することで、Device Name一覧の内容を更新する。
-** Start Uploadボタンを押下することで、推論元画像/推論結果のアップロードを開始する。
-** Stop Uploadボタンを押下することで、推論元画像/推論結果のアップロードを停止する。
-** Start Pollingボタンを押下することで、最新の推論元画像/推論結果の取得、画面表示を開始する。
+** Start Uploadボタンを押下することで、推論元画像/推論結果のアップロード、画面表示を開始する。
 *** 選択しているAI TaskがClassificationの場合は、推論結果一覧の表示も開始する。
-** Stop Pollingボタンを押下することで、最新の推論元画像/推論結果の取得、画面表示を停止する。
+** Stop Uploadボタンを押下することで、推論元画像/推論結果のアップロード、画面表示を停止する。
 *** 選択しているAI TaskがClassificationの場合は、推論結果一覧の表示も停止する。
 
 * History Mode
@@ -127,36 +136,39 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 * CONNECTION_DESTINATIONは下記の値を設定可能。
 ** SERVICE.Console
 ** SERVICE.Azure
+** SERVICE.AWS
 ** SERVICE.Local
 . 画面を起動する。
 .. メイン画面が表示される。
-. getDeviceInfoが呼び出され、「**Console**」に登録されているエッジAIデバイスのDevice Name一覧を取得する。
-. 取得したエッジAIデバイスのDevice Name一覧はドロップダウンリストに設定される。
+. getDeviceInfoが呼び出され、「**Console**」に登録されているエッジデバイスのDevice Name一覧を取得する。
+. 取得したエッジデバイスのDevice Name一覧はドロップダウンリストに設定される。
 . ラベルをインポート/エクスポートし、推論結果の表示ラベル設定を行う。
 .. ラベルインポート時はラベルファイルのデータのみを取得する。(ラベルファイル自体の取り込みは行わない)
 . Display Settingメニューを開き、AI Taskタブ上の表示設定を行う。
 
 . Realtime Modeの場合
-.. 使用するエッジAIデバイスのDevice NameをDevice Nameドロップダウンリストから選択し、Start Uploadを押下する。
+.. 使用するエッジデバイスのDevice NameをDevice Nameドロップダウンリストから選択し、Start Uploadを押下する。
 .. startUploadInferenceResultが呼び出され、推論元画像と推論結果のアップロードが開始される。
-.. Polling Intervalを設定し、Start Pollingボタンを押下する。
-.. getImage、getInferenceが定期呼び出しされ、最新の推論元画像と推論結果を取得、表示する。
+* デバイスがすでに推論中の場合「**Console**」のStartUploadInferenceResultAPIはサブディレクトリを返さない。 +
+その場合は、追加で最新のサブディレクトリを取得する。 +
+.. getImage、getInference(CONNECTION_DESTINATIONに「SERVICE.Local」指定時は、latestInference、specifiedImage)が定期呼び出しされ、最新の推論元画像と推論結果を取得、表示する。
+* 「SERVICE.Local」の場合は、取得間隔をより短くできるが取得タイミング都合により別のAPIを使用する。
+* getImage、getInferenceの定期呼び出しがタイムアウトになった場合はリトライせず、そのままアップロードも停止する。
 * データの取得先は、利用するクラウドサービスやSDKを判断する抽象化層がsrc/common下の接続情報やsrc/common/settings.tsのCONNECTION_DESTINATIONの設定値を元に判別する。
 ... CONNECTION_DESTINATIONに「SERVICE.Console」を指定した場合は、「**Console**」からデータを取得する。
 ... CONNECTION_DESTINATIONに「SERVICE.Azure」を指定した場合は、Azure Blob Storageからデータを取得する。
+... CONNECTION_DESTINATIONに「SERVICE.AWS」を指定した場合は、Amazon S3からデータを取得する。
 ... CONNECTION_DESTINATIONに「SERVICE.Local」を指定した場合は、Local Storageからデータを取得する。
 * 接続情報や接続先指定に誤りがある場合は、データ取得時にエラーが表示される。
 * 選択しているAI TaskがClassificationの場合は、推論結果一覧も表示する。
-.. Stop Uploadボタンを押下すると、stopUploadInferenceResultが呼び出され、推論元画像と推論結果のアップロードが停止される。
+.. Stop Uploadボタンを押下すると、stopUploadInferenceResultが呼び出され、推論元画像と推論結果のアップロード、表示が停止される。
+* データ取得がPolling Intervalに収まらない場合はタイムアウト処理を行い、推論元画像と推論結果の取得、表示が停止される。
+* 選択しているAI TaskがClassificationの場合は、推論結果一覧の表示も停止される。
 * 接続先にlocalを設定している場合はLocal HTTP Serverが保存したデータのファイル構成を、deviceIdとsubDirectoryを利用して変更する。 + 
 変更後のファイル構成は制限事項を参照とする。
 
-.. Stop Pollingボタンを押下すると、最新の推論元画像と推論結果の取得、表示が停止される。
-* データ取得がPolling Intervalに収まらない場合はタイムアウト処理を行い、推論元画像と推論結果の取得、表示が停止される。
-* 選択しているAI TaskがClassificationの場合は、推論結果一覧の表示も停止される。
-
 . History Modeの場合
-.. 使用するエッジAIデバイスのDevice NameをDevice Nameドロップダウンリストから選択する。
+.. 使用するエッジデバイスのDevice NameをDevice Nameドロップダウンリストから選択する。
 .. getSubDirectoryListが呼び出され、推論元画像が保存されているサブディレクトリの一覧を取得する。
 .. 取得したサブディレクトリの一覧はドロップダウンリストに設定される。
 .. 使用するサブディレクトリをSub Directoryドロップダウンリストから選択する。
@@ -166,6 +178,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 * データの取得先は、利用するクラウドサービスやSDKを判断する抽象化層がsrc/common下の接続情報やsrc/common/settings.tsのCONNECTION_DESTINATIONの設定値を元に判別する。
 ... CONNECTION_DESTINATIONに「SERVICE.Console」を指定した場合は、「**Console**」からデータを取得する。
 ... CONNECTION_DESTINATIONに「SERVICE.Azure」を指定した場合は、Azure Blob Storageからデータを取得する。
+... CONNECTION_DESTINATIONに「SERVICE.AWS」を指定した場合は、Amazon S3からデータを取得する。
 ... CONNECTION_DESTINATIONに「SERVICE.Local」を指定した場合は、Local Storageからデータを取得する。
 * サブディレクトリの最後の推論元画像と推論結果を取得、表示した後は、再度1件目の推論元画像と推論結果を取得する。
 * 選択しているAI TaskがClassificationの場合は、推論結果一覧も表示する。
@@ -192,7 +205,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 .. initializeDirectoryが呼び出され、データ保存の作業ディレクトリが作成される。
 ** 作業ディレクトリ作成はsrcフォルダ下に「work」という名前で作成される
 .. saveImage、saveInferencesが呼び出され、指定した範囲の推論元画像と推論結果が作業ディレクトリに保存される。
-.. createOverlaidImageが呼び出され、作業ディレクトリに保存された推論元画像に推論結果・Timestampを重畳した画像が作成、保存される。Save Dataボタン押下時に設定されている、ラベルやDisplay Settingの値を反映した重畳画像が作成される。（Overlaid Imageモードを選択した場合）
+.. createOverlaidImageが呼び出され、作業ディレクトリに保存された推論元画像に推論結果・Timestampを重畳した画像が作成、保存される。Save Dataボタン押下時に設定されている、ラベルやDisplay Settingの値を反映した重畳画像が作成される。(Overlaid Imageモードを選択した場合)
 .. createZipが呼び出され、保存された推論元画像と推論結果を含めたzipファイルが作業ディレクトリに作成される。
 .. getZipDataが呼び出され、作成されたzipファイルのデータを取得する。
 ** zipファイルのファイル構成は下記とする。
@@ -203,7 +216,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
       ∟yyyyMMddHHmmssSSS.json (3)
       ∟yyyyMMddHHmmssSSS.json (3)
 
-   (1) 推論開始時刻​
+   (1) 推論開始時刻
    (2) Original Imageモード時:推論元画像ファイル、Overlaid Imageモード時:重畳画像ファイル(ファイル名は、推論元画像出力時刻)
    (3) 推論結果ファイル(ファイル名は、推論結果出力時刻)
 
@@ -218,7 +231,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 * 「**Console**」へのアクセスができること。
 * 「**Console**」やクラウドサービスを利用する場合は、それぞれの接続情報が用意されていること。
 ** 「**Console**」を利用する場合はsrc/commonに console_access_settings.yaml があり、必要な接続情報が設定されていること。
-** 「**Console**」以外のクラウドサービスを利用する場合はsrc/commonに [サービス名]_access_settings.yaml があり、必要な接続情報が設定されていること。
+** 「**Console**」以外のクラウドサービスを利用する場合はsrc/commonに [サービス名小文字]_access_settings.yaml があり、必要な接続情報が設定されていること。
 *** 例
 
    azure_access_settings.yaml
@@ -236,7 +249,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 ** そのまま実行する場合に必要である。
 * Dockerが利用可能であること。
 ** Dockerコンテナをビルドして利用する場合に必要である。
-* エッジAIデバイスが「**Console**」に接続されており、「**Console**」からの操作を受け付ける状態である。
+* エッジデバイスが「**Console**」に接続されており、「**Console**」からの操作を受け付ける状態である。
 
 === API
 * GET
@@ -246,6 +259,8 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 ** {base_url}/api/totalImageCount/{deviceId}
 ** {base_url}/api/deviceInfo
 ** {base_url}/api/getZipData
+** {base_url}/api/latestInference
+** {base_url}/api/specifiedImage
 
 * POST
 ** {base_url}/api/startUploadInferenceResult/{deviceId}
@@ -266,7 +281,7 @@ NOTE: 「**Edge Application**」と「**Vision and Sensing Application**」は�
 
 [#_Overview]
 ==== 画面全体像
-image::./ScreenSpec_Visualization_OverView.png["画面全体像"]
+image::./images/ScreenSpec_Visualization_OverView.png["画面全体像"]
 
 . AI Taskタブ
 * *"Object Detection"* のタブと *"Classification"* のタブと *"Segmentation"* のタブに分かれている
@@ -275,7 +290,7 @@ image::./ScreenSpec_Visualization_OverView.png["画面全体像"]
 
 
 ==== Object Detectionタブ
-image::./ScreenSpec_Visualization_ObjectDetection.png[alt="Object Detectionタブ", width="700"]
+image::./images/ScreenSpec_Visualization_ObjectDetection.png[alt="Object Detectionタブ", width="700"]
 
 . Display Settingメニュー
 ** AI Taskタブ上の表示設定を行う
@@ -297,7 +312,7 @@ image::./ScreenSpec_Visualization_ObjectDetection.png[alt="Object Detectionタ�
 
 
 ==== Classificationタブ
-image::./ScreenSpec_Visualization_Classification.png[alt="Classificationタブ", width="700"]
+image::./images/ScreenSpec_Visualization_Classification.png[alt="Classificationタブ", width="700"]
 
 . Display Settingメニュー
 ** AI Taskタブ上の表示設定を行う
@@ -319,7 +334,7 @@ image::./ScreenSpec_Visualization_Classification.png[alt="Classificationタブ",
 
 
 ==== Segmentationタブ
-image::./ScreenSpec_Visualization_Segmentation.png[alt="Segmentationタブ", width="700"]
+image::./images/ScreenSpec_Visualization_Segmentation.png[alt="Segmentationタブ", width="700"]
 . Display Settingメニュー
 ** AI Taskタブ上の表示設定を行う
 . 画像ファイルのタイムスタンプ
@@ -370,31 +385,32 @@ image::./ScreenSpec_Visualization_Segmentation.png[alt="Segmentationタブ", wid
 
 
 ==== Realtime Modeタブ
-image::./ScreenSpec_Visualization_RealtimeMode.png[alt="Realtime Modeタブ", width="700"]
+image::./images/ScreenSpec_Visualization_RealtimeMode.png[alt="Realtime Modeタブ", width="700"]
 
 . Device Nameドロップダウンリスト
-** ユーザーが指定した接続先に登録されているエッジAIデバイスのDevice Nameを選択する
+** ユーザーが指定した接続先に登録されているエッジデバイスのDevice Nameを選択する
 +
 Device Nameのテキストボックスの長さを超える文字列が設定された場合は超過する部分が「...」に省略される
 . Reloadボタン
-** Device Nameドロップダウンリスト内のDevice Nameリストを、「**Console**」に登録されている最新のエッジAIデバイスのDevice Nameリストに更新する
+** Device Nameドロップダウンリスト内のDevice Nameリストを、「**Console**」に登録されている最新のエッジデバイスのDevice Nameリストに更新する
 ** Reload後は、Device NameドロップダウンリストはDevice Name未選択の状態になる
 . Polling Intervalスライダー
 ** ユーザーが指定した接続先からデータ取得する時のPolling間隔を設定するスライダー
 ** Polling間隔はスライダーの右横に数字で記載
+** Polling間隔の設定可能範囲や刻み値はCONNECTION_DESTINATIONが「SERVICE.Local」とそれ以外で異なる
+** 画像と推論結果のアップロード間隔をCommand Parameter FileのUploadIntervalから設定でき、RealtimeModeではUploadIntervalをPollingIntervalよりも短くする必要がある
+*** UploadIntervalのデフォルト値は30で、何も指定していない場合はデフォルト値が設定される(単位は1/30sec)
 . Start Upload/Stop Uploadボタン
-** 画像と推論結果のアップロードを開始/停止する
-. Start Polling/Stop Pollingボタン
-** ユーザーが指定した接続先から最新の画像・推論結果の取得と、表示を開始/停止する
+** 画像と推論結果のアップロード、ユーザーが指定した接続先から最新の画像・推論結果の取得と表示を開始/停止する
 
 
 ==== History Modeタブ
-image::./ScreenSpec_Visualization_HistoryMode.png[alt="History Modeタブ", width="700"]
+image::./images/ScreenSpec_Visualization_HistoryMode.png[alt="History Modeタブ", width="700"]
 
 . Device Nameドロップダウンリスト
-** 「**Console**」に登録されているエッジAIデバイスのDevice Nameを選択する
+** 「**Console**」に登録されているエッジデバイスのDevice Nameを選択する
 . Reloadボタン
-** Device Nameドロップダウンリスト内のDevice Nameリストを、「**Console**」に登録されている最新のエッジAIデバイスのDevice Nameリストに更新する
+** Device Nameドロップダウンリスト内のDevice Nameリストを、「**Console**」に登録されている最新のエッジデバイスのDevice Nameリストに更新する
 ** Reload後は、Device NameドロップダウンリストはDevice Name未選択の状態になる
 . Sub Directoryドロップダウンリスト
 ** ユーザーが指定した接続先に格納されている画像のSub Directoryを選択する
@@ -405,6 +421,7 @@ image::./ScreenSpec_Visualization_HistoryMode.png[alt="History Modeタブ", widt
 . Interval Timeスライダー
 ** 推論元画像を切り替える時のPlaying間隔を設定する
 ** Playing間隔はスライダーの右横に数字で記載
+** Playing間隔の設定可能範囲や刻み値はCONNECTION_DESTINATIONが「SERVICE.Local」とそれ以外で異なる
 . Start Playing/Stop Playingボタン
 ** 推論元画像切り替えを開始/停止する
 . Save Dataボタン
@@ -412,7 +429,7 @@ image::./ScreenSpec_Visualization_HistoryMode.png[alt="History Modeタブ", widt
 
 
 ==== Display Settingメニュー(Object Detectionタブ)
-image::./ScreenSpec_Visualization_SettingMenu_ObjectDetection.png["Display Settingメニュー(Object Detectionタブ)"]
+image::./images/ScreenSpec_Visualization_SettingMenu_ObjectDetection.png["Display Settingメニュー(Object Detectionタブ)"]
 
 . Display Settingメニューを閉じるボタン
 . Probabilityスライダー
@@ -423,7 +440,7 @@ image::./ScreenSpec_Visualization_SettingMenu_ObjectDetection.png["Display Setti
 
 
 ==== Display Settingメニュー(Classificationタブ)
-image::./ScreenSpec_Visualization_SettingMenu_Classification.png["Display Settingメニュー(Classificationタブ)"]
+image::./images/ScreenSpec_Visualization_SettingMenu_Classification.png["Display Settingメニュー(Classificationタブ)"]
 
 * 1～3はObject DetectionタブのDisplay Settingメニューと同様
 
@@ -440,7 +457,7 @@ image::./ScreenSpec_Visualization_SettingMenu_Classification.png["Display Settin
 
 
 ==== Display Settingメニュー(Segmentationタブ)
-image::./ScreenSpec_Visualization_SettingMenu_Segmentation.png["Display Settingメニュー(Segmentationタブ)"]
+image::./images/ScreenSpec_Visualization_SettingMenu_Segmentation.png["Display Settingメニュー(Segmentationタブ)"]
 
 . Display Settingメニューを閉じるボタン
 . Transparencyスライダー
@@ -450,7 +467,7 @@ image::./ScreenSpec_Visualization_SettingMenu_Segmentation.png["Display Setting�
 ** 画像ファイルのタイムスタンプの表示/非表示を設定する
 
 ==== Save Dataメニュー
-image::./ScreenSpec_Visualization_SaveMenu.png["Save Dataメニュー"]
+image::./images/ScreenSpec_Visualization_SaveMenu.png["Save Dataメニュー"]
 . Save Dataメニューを閉じるボタン
 . Typeラジオボタン
 ** 保存するデータを選択する
@@ -474,7 +491,7 @@ image::./ScreenSpec_Visualization_SaveMenu.png["Save Dataメニュー"]
 
 
 ==== Savingダイアログ
-image::./ScreenSpec_Visualization_Saving.png["Savingダイアログ"]
+image::./images/ScreenSpec_Visualization_Saving.png["Savingダイアログ"]
 . 保存データフォーマット
 ** 保存データフォーマットを表示する
 *** 保存中のデータがOriginal Imageの場合は、**"Saving Original Image"**が表示される
@@ -492,10 +509,17 @@ image::./ScreenSpec_Visualization_Saving.png["Savingダイアログ"]
 . 開発者は任意のブラウザから「**Visualization**」のリポジトリを開き、リポジトリをCloneする。
 . src/commonに接続情報が記載されている設定ファイルを配置する。
 . src/common/settings.tsの「CONNECTION_DESTINATION」に接続先を記載する。
-** 「CONNECTION_DESTINATION」にはconsole/azure/localが設定可能。
-.. consoleを設定した場合は「**Console**」からデータを取得する。
-.. azureを設定した場合はAzure Blob Storageからデータを取得する。
-.. localを設定した場合はsrc/common/settings.tsの「LOCAL_ROOT」に設定されたパスからデータを取得する。
+** CONNECTION_DESTINATIONには下記の値を設定可能。
++
+|===
+|設定値|データ取得先
+
+|SERVICE.Console|「**Console**」
+|SERVICE.Azure|Azure Blob Storage
+|SERVICE.AWS|Amazon S3
+|SERVICE.Local|src/common/settings.tsの「LOCAL_ROOT」に設定されたパス
+|===
+
 ** 「CONNECTION_DESTINATION」に設定した接続先の設定ファイルがsrc/commonにない場合、または設定ファイルに必要な認証情報が記載されていない場合は、推論元画像/推論結果の取得時にエラーダイアログが表示される。
 
 . リポジトリのルートディレクトリ直下にあるDockerfileに対し、下記コマンドを実行して「**Visualization**」 のDockerイメージを作成する。
@@ -519,10 +543,17 @@ npm install
 ....
 . src/commonに接続情報が記載されている設定ファイルを配置する。
 . src/common/settings.tsの「CONNECTION_DESTINATION」に接続先を記載する。
-** 「CONNECTION_DESTINATION」にはconsole/azure/localが設定可能。
-.. consoleを設定した場合は「**Console**」からデータを取得する。
-.. azureを設定した場合はAzure Blob Storageからデータを取得する。
-.. localを設定した場合はsrc/common/settings.tsの「LOCAL_ROOT」に設定されたパスからデータを取得する。
+** CONNECTION_DESTINATIONは下記の値を設定可能。
++
+|===
+|設定値|データ取得先
+
+|SERVICE.Console|「**Console**」
+|SERVICE.Azure|Azure Blob Storage
+|SERVICE.AWS|Amazon S3
+|SERVICE.Local|src/common/settings.tsの「LOCAL_ROOT」に設定されたパス
+|===
+
 ** 「CONNECTION_DESTINATION」に設定した接続先の設定ファイルがsrc/commonにない場合、または設定ファイルに必要な認証情報が記載されていない場合は、推論元画像/推論結果の取得時にエラーダイアログが表示される。
 . ターミナルで下記コマンドを実行し、「**Visualization**」を起動する。
 +
@@ -541,7 +572,7 @@ npm run start
 [#_AI Task-operation]
 .. Object Detectionタブの場合
 ... [**Display Setting**]メニューを開いて、[**Probability**]スライダー/[**Display Timestamp**] を設定する。
-* Polling/Playing中でも[**Probability**]スライダー は機能する。
+* 画像と推論結果の表示中でも[**Probability**]スライダーは機能する。
 * 推論元画像が表示されていれば、停止中でも機能する。
 ... 推論結果の表示ラベル設定を変更する。
 ... Modeタブの操作により、画像ファイルのタイムスタンプ/推論元画像/推論結果/推論結果生データ が表示される。
@@ -549,14 +580,14 @@ npm run start
 
 .. Classificationタブの場合
 ... [**Display Setting**]メニューを開いて、[**Probability**]スライダー/[**Display Timestamp**]ボタン/[**Display Top Score**]ドロップダウンリスト/[**Overlay Inference Result**]ボタン/[**Overlay Inference Result Color**]ボタン を設定する。
-* Polling/Playing中でも[**Probability**]スライダー は機能する。
+* 画像と推論結果の表示中でも[**Probability**]スライダーは機能する。
 * 推論元画像が表示されていれば、停止中でも機能する。
 ... 推論結果の表示ラベル設定を変更する。
 ... Modeタブの操作により、画像ファイルのタイムスタンプ/推論元画像/推論結果/推論結果一覧/推論結果生データが表示される。
 
 .. Segmentationタブの場合
 ... [**Display Setting**]メニューを開いて、[**Transparency**]スライダー/[**Display Timestamp**]ボタンを設定する。
-* Polling/Playing中でも[**Transparency**]スライダー は機能する。
+* 画像と推論結果の表示中でも[**Transparency**]スライダーは機能する。
 ... ラベルテーブルから推論結果の表示ラベル設定を変更する。
 .... [**Visible**]で推論結果の表示/非表示を設定する。
 .... [**Label**]で任意のラベルを設定する。
@@ -565,26 +596,27 @@ npm run start
 * 推論元画像が表示されていれば、停止中でも機能する。
 .... ラベル削除位置ドロップダウンからラベル削除位置を選択し、[**Delete Label**]を押下してラベルデータを削除する。
 * 推論元画像が表示されていれば、停止中でも機能する。
-... Modeタブの操作により、画像ファイルのタイムスタンプ/推論元画像/推論結果/推論結果生データ が表示される。
+... Modeタブの操作により、画像ファイルのタイムスタンプ/推論元画像/推論結果/推論結果生データが表示される。
 
 . Modeの選択
 [#_Mode-operation]
 .. Realtime Modeタブの場合
+... [**Device Name**]ドロップダウンリスト/[**Polling Interval**]スライダーを設定し、[**Start Upload**]ボタンを押下する。
 ** [**Device Name**]ドロップダウンリストを更新する場合は[**Reload**]ボタンを押下する。
-** Polling中は[**Device Name**]ドロップダウンリスト/[**Reload**]ボタン/[**Polling Interval**]スライダー は機能しない。
+** Upload中は[**Device Name**]ドロップダウンリスト/[**Reload**]ボタン/[**Polling Interval**]スライダーは機能しない。
 ... 指定した推論元画像/推論結果の取得が開始され、AI Taskタブ上に表示される。
-... [**Stop Polling**]ボタン押下後、[**Stop Upload**]ボタンを押下する。
-** Polling中に[**Stop Polling**]ボタンを押下するとPollingのみが停止されるが、Polling中に[**Stop Upload**]ボタンを押下すると、UploadとPollingの両方が停止される。
+... [**Stop Upload**]ボタンを押下する。
 
 .. History Modeタブの場合
-... [**Device Name**]ドロップダウンリスト/[**Sub Directory**]ドロップダウンリスト/[**Image Selection**]スライダー/[**Interval Time**]スライダー を設定し、[**Start Playing**]ボタンを押下する。
+... [**Device Name**]ドロップダウンリスト/[**Sub Directory**]ドロップダウンリスト/[**Image Selection**]スライダー/[**Interval Time**]スライダーを設定し、[**Start Playing**]ボタンを押下する。
 ** [**Device Name**]ドロップダウンリストを更新する場合は[**Reload**]ボタンを押下する。
-** Playing中は[**Device Name**]ドロップダウンリスト/[**Reload**]ボタン/[**Sub Directory**]ドロップダウンリスト/[**Image Selection**]スライダー/[**Interval Time**]スライダー は機能しない。
-** Stop Playing中に [**Image Selection**]スライダー の値を変更しても推論元画像は切り替わらない。
+** Playing中は[**Device Name**]ドロップダウンリスト/[**Reload**]ボタン/[**Sub Directory**]ドロップダウンリスト/[**Image Selection**]スライダー/[**Interval Time**]スライダーは機能しない。
+** Stop Playing中に [**Image Selection**]スライダーの値を変更しても推論元画像は切り替わらない。
 ... 指定した推論元画像/推論結果の取得が開始され、AI Taskタブ上に表示される。
 ... [**Stop Playing**]ボタンを押下する。
 ... [**Save Data**]ボタンを押下する。
 ** Save Dataメニューが表示される。
+** Playing中は[**Save Data**]ボタンは機能しない。
 ... [**Select Save Data**]ラジオボタンから保存するデータを選択する。
 ... [**Save Range**]スライダーから、サブディレクトリにある推論元画像の保存範囲を選択する。
 ... [**Save**]ボタンを押下する。
@@ -607,7 +639,7 @@ URL：{base_url}/api/image/{deviceId}?{imagePath}&{numberOfImages}&{skip}&{order
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 
 |imagePath
@@ -652,7 +684,7 @@ URL : {base_url}/api/inference/{deviceId}?{subDirectory}&{timestamp}&{aiTask}&{m
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論結果をUploadしているエッジAIデバイスのDevice ID
+|推論結果をUploadしているエッジデバイスのDevice ID
 |指定なし
 
 |subDirectory
@@ -692,7 +724,7 @@ URL : {base_url}/api/subDirectoryList/{deviceId}
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 |===
 
@@ -712,7 +744,7 @@ URL : {base_url}/api/totalImageCount/{deviceId}?{subDirectory}
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 
 |subDirectory
@@ -730,7 +762,7 @@ URL : {base_url}/api/totalImageCount/{deviceId}?{subDirectory}
 
 * getDeviceInfo +
 URL : {base_url}/api/deviceInfo
-** 「**Console**」に登録されているエッジAIデバイスのDevice NameとDevice ID一覧を取得する。
+** 「**Console**」に登録されているエッジデバイスのDevice NameとDevice ID一覧を取得する。
 
 |===
 |Query Parameter's name|Meaning|Range of parameter
@@ -744,7 +776,7 @@ URL : {base_url}/api/deviceInfo
 |Return value|Meaning
 
 |device list
-|エッジAIデバイスのDevice NameとDevice ID一覧
+|エッジデバイスのDevice NameとDevice ID一覧
 |===
 
 
@@ -768,17 +800,59 @@ URL : {base_url}/api/getZipData
 |===
 
 
+* latestInference +
+URL : {base_url}/api/latestInference?{aiTask}
+** Local Storageに保存されている最新の推論結果を取得し返却する。
+
+|===
+|Query Parameter's name|Meaning|Range of parameter
+
+|aiTask
+|選択しているAI Taskの種類
+|ObjectDetection、Classification、Segmentation
+|===
+
+|===
+|Return value|Meaning
+
+|deserializedRawData
+|表示用の推論結果
+
+|inference
+|Local Storageに保存されている最新の推論結果
+|===
+
+
+* specifiedImage +
+URL : {base_url}/api/specifiedImage?{timestamp}
+** Local Storageからファイル名がTimestampに一致する画像を取得する。
+
+|===
+|Query Parameter's name|Meaning|Range of parameter
+
+|timestamp
+|取得する推論画像のタイムスタンプ(ファイル名)
+|指定なし
+|===
+
+|===
+|Return value|Meaning
+
+|buff
+|Local Storageに保存されているファイル名がTimestampの画像バイナリデータ
+|===
+
 === POST
 * startUploadInferenceResult +
 URL : {base_url}/api/startUploadInferenceResult/{deviceId}
-** 選択したエッジAIデバイスのDevice Nameに該当するDevice IDに対して、推論結果と推論元画像のUpload開始を要求する。
+** 選択したエッジデバイスのDevice Nameに該当するDevice IDに対して、推論結果と推論元画像のUpload開始を要求する。
 *** 当API内でCommand Parameter Fileの一覧取得も行う
 
 |===
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像と推論結果をUploadするエッジAIデバイスのDevice ID
+|推論元画像と推論結果をUploadするエッジデバイスのDevice ID
 |指定なし
 |===
 
@@ -795,14 +869,14 @@ URL : {base_url}/api/startUploadInferenceResult/{deviceId}
 
 * stopUploadInferenceResult +
 URL : {base_url}/api/stopUploadInferenceResult/{deviceId}
-** 選択したエッジAIデバイスのDevice Nameに該当するDevice IDに対して、推論結果と画像のUpload停止を要求する。
+** 選択したエッジデバイスのDevice Nameに該当するDevice IDに対して、推論結果と画像のUpload停止を要求する。
 ** 接続先がlocalの場合はLocal Storageのファイル構成を修正する。
 
 |===
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像と推論結果のUploadを停止するエッジAIデバイスのDevice ID
+|推論元画像と推論結果のUploadを停止するエッジデバイスのDevice ID
 |指定なし
 
 |===
@@ -831,7 +905,7 @@ URL : {base_url}/api/initializeDirectory/{deviceId}
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 |===
 
@@ -859,7 +933,7 @@ URL : {base_url}/api/saveImage/{deviceId}
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 |===
 
@@ -895,7 +969,7 @@ URL : {base_url}/api/saveInferences/{deviceId}
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 |===
 
@@ -944,7 +1018,7 @@ URL : {base_url}/api/createOverlaidImage/{deviceId} +
 |Query Parameter's name|Meaning|Range of parameter
 
 |deviceId
-|推論元画像をUploadしているエッジAIデバイスのDevice ID
+|推論元画像をUploadしているエッジデバイスのDevice ID
 |指定なし
 |===
 
@@ -1008,7 +1082,7 @@ URL : {base_url}/api/createOverlaidImage/{deviceId} +
 
 == 制限事項
 * 今回対応するSegmentationの種類は、Semantic Segmentationのみとする。
-* 推論結果の表示ラベル設定はJSON形式の下記のフォーマットで行う（下記例を参考）。
+* 推論結果の表示ラベル設定はJSON形式の下記のフォーマットで行う(下記例を参考)。
 ** key名が例と違っている場合はインポート時にエラーとなる。
 ** ラベルはAIモデルが識別するクラスID順に書き込まれる。
 ** 例 Object Detection/Classificationの場合
@@ -1043,12 +1117,13 @@ URL : {base_url}/api/createOverlaidImage/{deviceId} +
       ]
    }
 
-* 「**Console**」のUIから、Command Parameter Fileを下記の設定にしておく。
+* 「**Console**」のUIから、Command Parameter Fileを下記の設定にしておく。(2023/12/04時点)
 ** Mode=1(Image&Inference Result)
 ** FileFormat="JPG"
 ** NumberOfInferencesPerMessage=1
+** RealtimeMode使用時はUploadIntervalをPolling Intervalよりも短くする必要がある
 ** AIモデルやアプリケーションの内容に応じて、その他のパラメータも変更する必要がある
-* 実行時にAIモデルやアプリケーションがデプロイされていないエッジAIデバイスを選択した場合、正常に動作しない。
+* 実行時にAIモデルやアプリケーションがデプロイされていないエッジデバイスを選択した場合、正常に動作しない。
 * データ取得時のAIモデルと異なるAI Taskを選択した場合、エラーまたは不正なデータとなる場合がある。
 * History ModeやRealtime Modeにおいてサブディレクトリに1000枚を超えるデータが存在する場合、画像の再生順が乱れる可能性がある。
 * Local HTTP ServerがLocal Storageにデータを保存する際のファイル構成は下記とする。
@@ -1065,11 +1140,11 @@ URL : {base_url}/api/createOverlaidImage/{deviceId} +
             ∟yyyyMMddHHmmssfff.txt (3)
             ∟yyyyMMddHHmmssfff.txt (3)
 
-   (1) 推論開始時刻​
+   (1) 推論開始時刻
    (2) 推論元画像ファイル(ファイル名は、推論元画像出力時刻)
    (3) 推論結果ファイル(ファイル名は、推論結果出力時刻)   
 
-* Azure Blob Storage利用時のデータファイル構成は下記とする。
+* Azure Blob Storage/Amazon S3利用時のデータファイル構成は下記とする。
 
    Device ID
       ∟image
@@ -1081,17 +1156,19 @@ URL : {base_url}/api/createOverlaidImage/{deviceId} +
             ∟yyyyMMddHHmmssfff.txt (3)
             ∟yyyyMMddHHmmssfff.txt (3)
 
-   (1) 推論開始時刻​
+   (1) 推論開始時刻
    (2) 推論元画像ファイル(ファイル名は、推論元画像出力時刻)
    (3) 推論結果ファイル(ファイル名は、推論結果出力時刻)
    
-* Local Storageを使用中に、[Stop Upload]ボタン押下時にエラーが発生した場合、画像・推論結果の移動処理が行われない。 +
-また、その状態のまま[Start Upload]ボタンを押下した場合、 +
+* Local Storageを使用中に、[**Stop Upload**]ボタン押下時にエラーが発生した場合、画像・推論結果の移動処理が行われない。 +
+また、その状態のまま[**Start Upload**]ボタンを押下した場合、 +
 直前にUploadしたデータと次に取得するデータが混ざってしまうため下記の対応が必要となる。
 ** LOCAL_ROOTにある画像・推論結果の移動または削除
+* CONNECTION_DESTINATIONに「SERVICE.Console」を指定した場合、History Modeでは推論開始時刻から10時間後までの画像・推論結果しか取得することはできない。
+* [**Stop Upload**]ボタンが押下できなくなった場合、「**Console**」のUIから推論停止操作を行う必要がある。
 
 == その他特記事項
-* エッジAIデバイスから「**Console**」への画像アップロード時に、最大数分程度の遅延が発生することがある。
+* エッジデバイスから「**Console**」への画像アップロード時に、最大数分程度の遅延が発生することがある。
 
 == 未決定事項
 * なし

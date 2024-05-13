@@ -35,6 +35,16 @@ export type AzureAccessLibrarySettings = {
     container_name: string
   }
 }
+
+export type AwsAccessLibrarySettings = {
+  aws_access_settings: {
+    bucket_name: string
+    access_key_id: string
+    secret_access_key: string
+    region: string
+  }
+}
+
 const ConsoleSettingsFile = './common/console_access_settings.yaml'
 
 export function getConsoleAccessLibrarySettings () {
@@ -49,9 +59,8 @@ export function getConsoleAccessLibrarySettings () {
 
   isFile(ConsoleSettingsFile)
   isSymbolicLinkFile(ConsoleSettingsFile)
-
-  const consoleAccessSettingFileData = yaml.load(fs.readFileSync(ConsoleSettingsFile, { encoding: 'utf8', flag: 'r' })) as ConsoleAccessLibrarySettings
   try {
+    const consoleAccessSettingFileData = yaml.load(fs.readFileSync(ConsoleSettingsFile, { encoding: 'utf8', flag: 'r' })) as ConsoleAccessLibrarySettings
     consoleAccessSettings = {
       console_access_settings: {
         console_endpoint: consoleAccessSettingFileData.console_access_settings.console_endpoint,
@@ -93,6 +102,36 @@ export function getAzureAccessLibrarySettings () {
   }
 }
 
+const AwsAccessLibrarySettingsFile = './common/aws_access_settings.yaml'
+
+export function getAwsAccessLibrarySettings () {
+  let awsAccessSettings: AwsAccessLibrarySettings = {
+    aws_access_settings: {
+      bucket_name: '',
+      access_key_id: '',
+      secret_access_key: '',
+      region: ''
+    }
+  }
+
+  isFile(AwsAccessLibrarySettingsFile)
+  isSymbolicLinkFile(AwsAccessLibrarySettingsFile)
+  try {
+    const awsAccessSettingFileData = yaml.load(fs.readFileSync(AwsAccessLibrarySettingsFile, { encoding: 'utf8', flag: 'r' })) as AwsAccessLibrarySettings
+    awsAccessSettings = {
+      aws_access_settings: {
+        bucket_name: awsAccessSettingFileData.aws_access_settings.bucket_name,
+        access_key_id: awsAccessSettingFileData.aws_access_settings.access_key_id,
+        secret_access_key: awsAccessSettingFileData.aws_access_settings.secret_access_key,
+        region: awsAccessSettingFileData.aws_access_settings.region
+      }
+    }
+    return awsAccessSettings
+  } catch (e) {
+    throw new Error(JSON.stringify({ message: 'Wrong setting. Check the settings.' }))
+  }
+}
+
 export async function getOcspStatus (url: string) {
   try {
     const proxy = getProxyEnv()
@@ -107,13 +146,12 @@ export async function getOcspStatus (url: string) {
     } else {
       return false
     }
-  } catch (e) {
-    console.error('Certificate Expired or Invalid certificate')
-    return false
+  } catch (e: any) {
+    throw new Error(JSON.stringify({ message: e.message }))
   }
 }
 
-function getProxyEnv () {
+export function getProxyEnv () {
   const envKeys = ['https_proxy', 'HTTPS_PROXY']
   for (const key of envKeys) {
     const val = process.env[key]

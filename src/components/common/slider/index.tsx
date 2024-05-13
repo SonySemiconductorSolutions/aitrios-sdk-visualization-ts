@@ -28,6 +28,7 @@ type SliderProps = {
   setCurrValue: (currValue: number) => void
   min?: number
   max: number
+  step?: number
 }
 
 type RangeSliderProps = {
@@ -49,7 +50,7 @@ export default function CustomSlider (props: SliderProps) {
           onChange={(val: number) => props.setCurrValue(val)}
           min={(props.min) ? props.min : 0}
           max={props.max}
-          step={1}
+          step={(props.step) ? props.step : 1}
           focusThumbOnChange={false}
           isDisabled={props.isPlaying}
         >

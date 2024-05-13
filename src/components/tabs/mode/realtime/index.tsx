@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,62 +14,33 @@
  * limitations under the License.
  */
 
-import React, { useEffect } from 'react'
-import { ErrorData, handleResponseErr, uploadHandler, DeviceListData } from '../../../../hooks/util'
-import { REALTIME_MODE } from '../../../../pages'
+import React, { useContext, useCallback } from 'react'
+import { uploadHandler } from '../../../../hooks/util'
+import { MIN_INTERVAL_SEC, MAX_INTERVAL_SEC, STEP_INTERVAL_SEC, MIN_HISH_FPS_INTERVAL_SEC, STEP_HISH_FPS_INTERVAL_SEC } from '../../../../common/constants'
 import DefaultButton from '../../../common/button/defaultbutton'
-import StartPlayingSVG from '../../../common/button/defaultbutton/startplaying-svg'
-import StopPlayingSVG from '../../../common/button/defaultbutton/stopplaying-svg'
 import StartUploadSVG from '../../../common/button/defaultbutton/startupload-svg'
 import CustomSlider from '../../../common/slider'
 import TimerSVG from '../../../common/slider/timer-svg'
 import styles from './realtime.module.scss'
 import StopUploadSVG from '../../../common/button/defaultbutton/stopupload-svg'
+import { UserContext } from '../../../../hooks/context'
+import { State, Action } from '../../../../hooks/reducer'
+import { CONNECTION_DESTINATION, SERVICE } from '../../../../common/settings'
 
 type RealtimeProps = {
   deviceId: string
-  subDirectory: string
-  setDeviceId: (deviceId: string) => void
-  deviceIdList: DeviceListData
-  setDeviceIdList: (deviceListData: DeviceListData) => void
-  isPlaying: boolean
-  mode: string
-  intervalTimeValue: number
+  state: State
+  dispatch: React.Dispatch<Action>
   isLoading: boolean
-  isUploading: boolean
-  setIsPlaying: (isPlaying: boolean) => void
-  setImagePath: (isImagePath: string) => void
-  setIsUploading: (uploading: boolean) => void
-  setIsLoading: (isLoading: boolean) => void
-  setIntervalTimeValue: (interval: number) => void
-  setLoadingDialogFlg: (display: boolean) => void
 }
 
 export default function Realtime (props: RealtimeProps) {
-  useEffect(() => {
-    if (props.mode === REALTIME_MODE) {
-      if (Object.keys(props.deviceIdList).length === 0) {
-        (async () => {
-          props.setDeviceId('')
-          props.setDeviceIdList({})
-          props.setLoadingDialogFlg(true)
-          const res = await fetch('/api/deviceInfo/deviceInfo', { method: 'GET' })
-          props.setLoadingDialogFlg(false)
-          if (res.status === 200) {
-            await res.json().then((data) => {
-              if (Object.keys(data).length === 0) {
-                return window.alert('Connected device not found.')
-              }
-              props.setDeviceIdList(data)
-            })
-          } else {
-            const errorMessage: ErrorData = await res.json()
-            handleResponseErr(errorMessage)
-          }
-        })()
-      }
-    }
-  }, [props.mode])
+  const { setLoadingDialogFlg } = useContext(UserContext)
+  const { setIsLoading } = useContext(UserContext)
+
+  const handleUpdateInterval = useCallback((currValue: number) => {
+    props.dispatch({ type: 'setIntervalTimeValue', payload: { intervalTimeValue: currValue } })
+  }, [])
 
   return (
     <div>
@@ -77,14 +48,15 @@ export default function Realtime (props: RealtimeProps) {
         Polling Interval (seconds)
         <div className={styles['interval-slider']}>
           <CustomSlider icon={<TimerSVG />}
-            isPlaying={props.isPlaying}
-            currValue={props.intervalTimeValue}
-            setCurrValue={props.setIntervalTimeValue}
-            min={10}
-            max={120}
+            isPlaying={props.state.isPlaying}
+            currValue={props.state.intervalTimeValue}
+            setCurrValue={handleUpdateInterval}
+            min={CONNECTION_DESTINATION === SERVICE.Local ? MIN_HISH_FPS_INTERVAL_SEC : MIN_INTERVAL_SEC}
+            max={MAX_INTERVAL_SEC}
+            step={CONNECTION_DESTINATION === SERVICE.Local ? STEP_HISH_FPS_INTERVAL_SEC : STEP_INTERVAL_SEC}
           />
           <div className={styles['unit-area']}>
-            {`${props.intervalTimeValue} sec`}
+            {`${props.state.intervalTimeValue} sec`}
           </div>
         </div>
       </div>
@@ -92,39 +64,21 @@ export default function Realtime (props: RealtimeProps) {
         <div className={styles['items-container']}>
           <DefaultButton
             isLoading={props.isLoading}
-            icon={!props.isUploading ? <StartUploadSVG /> : <StopUploadSVG />}
-            text={!props.isUploading ? 'Start Upload' : 'Stop Upload'}
+            icon={!props.state.isUploading ? <StartUploadSVG /> : <StopUploadSVG />}
+            text={!props.state.isUploading ? 'Start Upload' : 'Stop Upload'}
             disabled={props.isLoading}
             action={() => {
               uploadHandler({
-                isUploading: props.isUploading,
                 deviceId: props.deviceId,
-                subDirectory: props.subDirectory,
-                isPlaying: props.isPlaying,
-                setIsUploading: props.setIsUploading,
-                setIsLoading: props.setIsLoading,
-                setImagePath: props.setImagePath,
-                setIsPlaying: props.setIsPlaying,
-                setLoadingDialogFlg: props.setLoadingDialogFlg
+                setIsLoading,
+                setLoadingDialogFlg,
+                state: props.state,
+                dispatch: props.dispatch
               })
               if (props.deviceId) {
-                props.setLoadingDialogFlg(true)
-                props.setIsUploading(false)
-                props.setIsPlaying(false)
+                setLoadingDialogFlg(true)
               }
             }}
-          />
-          <DefaultButton isLoading={false}
-            icon={!props.isPlaying ? <StartPlayingSVG /> : <StopPlayingSVG />}
-            text={!props.isPlaying ? 'Start Polling' : 'Stop Polling'}
-            disabled={!props.isUploading}
-            action={() => {
-              if (!props.isPlaying) {
-                props.setLoadingDialogFlg(true)
-              }
-              props.setIsPlaying(!props.isPlaying)
-            }
-            }
           />
         </div>
       </div>

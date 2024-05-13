@@ -1,6 +1,6 @@
 {
   "name": "visualization",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "build": "cd src && ts-node -P tsconfig.node.json checkLocalRoot.ts && next build",
@@ -14,16 +14,20 @@
     "coverage": "jest --coverage --silent"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.461.0",
+    "@aws-sdk/s3-request-presigner": "^3.478.0",
     "@azure/storage-blob": "^12.15.0",
     "@chakra-ui/react": "^2.5.5",
     "@emotion/react": "^11.10.5",
     "@emotion/styled": "^11.10.5",
     "@peculiar/asn1-schema": "^2.0.37",
     "@peculiar/x509": "^1.9.3",
+    "@smithy/node-http-handler": "^2.1.10",
     "@types/js-yaml": "^4.0.5",
+    "@types/react-color": "^3.0.11",
     "@types/wicg-file-system-access": "^2020.9.5",
     "@typescript-eslint/parser": "^5.41.0",
-    "consoleaccesslibrary": "file:src/aitrios-sdk-console-access-lib-ts/src/consoleaccesslibrary-1.1.0.tgz",
+    "consoleaccesslibrary": "file:src/aitrios-sdk-console-access-lib-ts/src/consoleaccesslibrary-1.2.0.tgz",
     "date-fns": "^2.30.0",
     "date-fns-tz": "^2.0.0",
     "eslint-plugin-n": "^15.3.0",
@@ -38,6 +42,7 @@
     "nprogress": "^0.2.0",
     "pvtsutils": "^1.3.2",
     "react": "18.2.0",
+    "react-color": "^2.19.3",
     "react-dom": "18.2.0",
     "react-konva": "^18.2.8",
     "sharp": "^0.32.6",
@@ -69,6 +74,7 @@
     "jest-environment-jsdom": "^29.5.0",
     "node-mocks-http": "^1.11.0",
     "sass": "^1.44.0",
-    "ts-jest": "^29.1.0"
+    "ts-jest": "^29.1.0",
+    "web-streams-polyfill": "^4.0.0"
   }
 }

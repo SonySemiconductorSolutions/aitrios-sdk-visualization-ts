@@ -19,7 +19,7 @@ import { DeviceListData } from '../../../hooks/util'
 import { getConsoleService } from '../../../hooks/getConsoleStorage'
 
 /**
- * Uses Console to retrieve information about a devices.
+ * Uses Console to retrieve information about a Edge Devices.
  *
  * @returns List about the devices ID.
  */
