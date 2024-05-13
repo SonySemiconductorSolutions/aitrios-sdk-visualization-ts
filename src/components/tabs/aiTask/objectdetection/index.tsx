@@ -15,51 +15,51 @@
  */
 
 import { Textarea, Button } from '@chakra-ui/react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { ObjectDetectionProps, handleFileInputChangeODorCLS, exportLabelDataODorCLS } from '../../../../hooks/util'
-import { OBJECT_DETECTION } from '../../../../pages'
+import { OBJECT_DETECTION } from '../../../../common/constants'
 import styles from './objectdetection.module.scss'
 import dynamic from 'next/dynamic'
+import { UserContext } from '../../../../hooks/context'
 
 export const ROWDATA_EXPLANATION = 'Inference Result'
 export const LABEL_EXPLANATION = 'Label Setting'
 
 const BoundingBoxes = dynamic(() => import('../../../common/boundingboxes'), { ssr: false })
 
-export default function ObjectiveDetection (props: ObjectDetectionProps) {
-  const [labelTextOD, setLabelTextOD] = useState<string>(JSON.stringify(props.labelData).replace(/"|\[|\]/g, '').replace(/,/g, '\n'))
+export default function ObjectDetection (props: ObjectDetectionProps) {
+  const { aiTask } = useContext(UserContext)
+  const [labelTextOD, setLabelTextOD] = useState<string>(JSON.stringify(props.data.labelData).replace(/"|\[|\]/g, '').replace(/,/g, '\n'))
   const [timeStamp, setTimeStamp] = useState<string>('')
   const [rawData, setRawData] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    props.setLabelData(labelTextOD.split(/\n/))
+    props.setData((prevState: any) => ({ ...prevState, labelData: labelTextOD.split(/\n/) }))
   }, [labelTextOD])
 
   useEffect(() => {
-    if (props.aiTask === OBJECT_DETECTION) {
-      setTimeStamp(props.timestamp)
+    if (aiTask === OBJECT_DETECTION) {
+      setTimeStamp(props.data.timestamp)
     }
-  }, [props.image])
+  }, [props.data.image])
 
   return (
     <div className={styles['object-detection-container']}>
       <div className={styles['upper-items']}>
-        {props.isDisplayTs === true
+        {props.displaySetting.isDisplayTs === true
           ? <div className={styles['timestamp-area']}>Timestamp:{timeStamp}</div>
           : null
         }
         <div className={styles['boundingboxes-area']}>
           <BoundingBoxes
-            aiTask={props.aiTask}
-            boundingBoxes={props.inferences}
-            img={props.image}
-            confidenceThreshold={props.probability}
-            label={props.labelData}
-            inferenceRawData={props.inferenceRawData}
+            aiTask={aiTask}
+            boundingBoxes={props.data.inference}
+            img={props.data.image}
+            confidenceThreshold={props.displaySetting.probability}
+            label={props.data.labelData}
+            inferenceRawData={props.data.inferenceRawData}
             setRawData={setRawData}
-            imageCount={props.imageCount}
-            setDisplayCount={props.setDisplayCount}
-            setLoadingDialogFlg={props.setLoadingDialogFlg}
+            dispatch={props.dispatch}
           />
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function ObjectiveDetection (props: ObjectDetectionProps) {
               />
             </Button>
             <Button
-              onClick={() => exportLabelDataODorCLS(props)}
+              onClick={() => exportLabelDataODorCLS(props.data.labelData)}
               style={{ color: '#ffffff', backgroundColor: '#2d78be' }}
               variant='solid'
               size='md'

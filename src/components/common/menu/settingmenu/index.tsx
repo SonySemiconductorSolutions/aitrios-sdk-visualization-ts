@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, 2023 Sony Semiconductor Solutions Corp. All rights reserved.
+ * Copyright 2022, 2023, 2024 Sony Semiconductor Solutions Corp. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 
 import { Modal, ModalBody, ModalCloseButton, ModalContent, ModalFooter, ModalHeader, ModalOverlay, useDisclosure } from '@chakra-ui/react'
-import React from 'react'
-import { CLASSIFICATION, SEGMENTATION } from '../../../../pages'
+import React, { useContext } from 'react'
+import { CLASSIFICATION, SEGMENTATION } from '../../../../common/constants'
+import { DisplaySetting } from '../../../../hooks/util'
 import DefaultButton from '../../button/defaultbutton'
 import SettingSVG from '../../button/defaultbutton/setting-svg'
 import RadioButton from '../../button/radiobutton'
@@ -24,37 +25,48 @@ import DropDownList from '../../dropdownlist'
 import CustomSlider from '../../slider'
 import ProbabilitySVG from '../../slider/probability-svg'
 import styles from './settingmenu.module.scss'
+import { UserContext } from '../../../../hooks/context'
+import ColorPicker from '../../colorPicker'
 
-type SettingMenuProps = {
-  aiTask: string
-  mode: string
-  probability: number
-  setProbability: (probability: number) => void
-  isDisplayTs: boolean
-  setIsDisplayTs: (isDisplayTs: boolean) => void
-  displayScore?: number
-  setDisplayScore?: (displayScore: number) => void
-  isOverlayIR?: boolean
-  setIsOverlayIR?: (isOverlayIR: boolean) => void
-  overlayIRC?: string
-  setOverlayIRC?: (isOverlayIRC: string) => void
-  transparency?: number
-  setTransparency?: (transparency: number) => void
+export type SettingMenuProps = {
+  displaySetting: DisplaySetting
+  setDisplaySetting: (value: React.SetStateAction<DisplaySetting>) => void
 }
 
 export default function SettingMenu (props: SettingMenuProps) {
+  const { aiTask } = useContext(UserContext)
   const RADIO_TEXT: string[] = ['ON', 'OFF']
   const { isOpen, onOpen, onClose } = useDisclosure()
   const scoreList = [...Array(21)].map((_, num) => num)
 
-  const changeDisplayTs = () => {
-    props.setIsDisplayTs(!props.isDisplayTs)
+  const setDisplayTs = () => {
+    const setting = { ...props.displaySetting, isDisplayTs: !props.displaySetting.isDisplayTs }
+    props.setDisplaySetting(setting)
   }
 
-  const changeOverlay = () => {
-    if (props.setIsOverlayIR !== undefined) {
-      props.setIsOverlayIR(!props.isOverlayIR)
-    }
+  const setOverlay = () => {
+    const setting = { ...props.displaySetting, isOverlayIR: !props.displaySetting.isOverlayIR }
+    props.setDisplaySetting(setting)
+  }
+
+  const setProbability = (currValue: number) => {
+    const setting = { ...props.displaySetting, probability: currValue }
+    props.setDisplaySetting(setting)
+  }
+
+  const setTransparency = (currValue: number) => {
+    const setting = { ...props.displaySetting, transparency: currValue }
+    props.setDisplaySetting(setting)
+  }
+
+  const setDisplayScore = (value: number) => {
+    const setting = { ...props.displaySetting, displayScore: value }
+    props.setDisplaySetting(setting)
+  }
+
+  const setOverlayIRC = (value: string) => {
+    const setting = { ...props.displaySetting, overlayIRC: value }
+    props.setDisplaySetting(setting)
   }
 
   return (
@@ -66,26 +78,26 @@ export default function SettingMenu (props: SettingMenuProps) {
           <ModalHeader />
           <ModalCloseButton />
           <ModalBody>
-            {props.aiTask !== SEGMENTATION
+            {aiTask !== SEGMENTATION
               ? <div className={styles['probability-area']}>
                 <div>Probability</div>
                 <div className={styles['slider-area']}>
-                  <CustomSlider icon={<ProbabilitySVG />} currValue={props.probability} setCurrValue={props.setProbability} max={100} />
+                  <CustomSlider icon={<ProbabilitySVG />} currValue={props.displaySetting.probability} setCurrValue={setProbability} max={100} />
                   <div className={styles['unit-area']}>
-                    {` >= ${props.probability}  %`}
+                    {` >= ${props.displaySetting.probability}  %`}
                   </div>
                 </div>
               </div>
               : null
             }
 
-            {props.aiTask === SEGMENTATION && props.transparency !== undefined && props.setTransparency !== undefined
+            {aiTask === SEGMENTATION
               ? <div className={styles['probability-area']}>
               <div>Transparency</div>
               <div className={styles['slider-area']}>
-                <CustomSlider icon={<ProbabilitySVG />} currValue={props.transparency} setCurrValue={props.setTransparency} max={100} />
+                <CustomSlider icon={<ProbabilitySVG />} currValue={props.displaySetting.transparency} setCurrValue={setTransparency} max={100} />
                 <div className={styles['unit-area']}>
-                  {`${props.transparency}  %`}
+                  {`${props.displaySetting.transparency}  %`}
                 </div>
               </div>
             </div>
@@ -93,9 +105,9 @@ export default function SettingMenu (props: SettingMenuProps) {
             }
             <div className={styles['radio-button']}>
               Display Timestamp
-              <RadioButton name={'tsRadio'} radioValue={props.isDisplayTs ? RADIO_TEXT[0] : RADIO_TEXT[1]} setRadioValue={changeDisplayTs} text={RADIO_TEXT} />
+              <RadioButton name={'tsRadio'} radioValue={props.displaySetting.isDisplayTs ? RADIO_TEXT[0] : RADIO_TEXT[1]} setRadioValue={setDisplayTs} text={RADIO_TEXT} />
             </div>
-            {props.aiTask === CLASSIFICATION
+            {aiTask === CLASSIFICATION
               ? <div className={styles['display-top-score']}>Display Top
                 <div className={styles['number-list']}>
                   <DropDownList
@@ -104,12 +116,10 @@ export default function SettingMenu (props: SettingMenuProps) {
                     className={styles['']}
                     list={scoreList}
                     onChange={(event) => {
-                      if (props.displayScore !== undefined && props.setDisplayScore !== undefined) {
-                        props.setDisplayScore(Number(event.target.value))
-                      }
+                      setDisplayScore(Number(event.target.value))
                     }
                     }
-                    value={props.displayScore}
+                    value={props.displaySetting.displayScore}
                     defaultSpace= {true}
                     disabled={false}
                   />
@@ -117,26 +127,18 @@ export default function SettingMenu (props: SettingMenuProps) {
                 Score</div>
               : null
             }
-            {props.aiTask === CLASSIFICATION
+            {aiTask === CLASSIFICATION
               ? <div className={styles['radio-button']}>Overlay Inference Result
-                <RadioButton name={'overlayRadio'} radioValue={props.isOverlayIR ? RADIO_TEXT[0] : RADIO_TEXT[1]} setRadioValue={changeOverlay} text={RADIO_TEXT} />
+                <RadioButton name={'overlayRadio'} radioValue={props.displaySetting.isOverlayIR ? RADIO_TEXT[0] : RADIO_TEXT[1]} setRadioValue={setOverlay} text={RADIO_TEXT} />
               </div>
               : null
             }
-            {props.aiTask === CLASSIFICATION
+            {aiTask === CLASSIFICATION
               ? <div className={styles['overlay-inference-result-color']}>Overlay Inference Result Color
-                <input id="select-inferencecolor"
-                  role='color'
-                  type='color'
-                  onChange={(event) => {
-                    if (props.overlayIRC !== undefined && props.setOverlayIRC !== undefined) {
-                      props.setOverlayIRC(event.target.value)
-                    }
-                  }
-                  }
-                  value={props.overlayIRC}
-                />
-              </div>
+                  <div>
+                    <ColorPicker color={props.displaySetting.overlayIRC} changeColor={setOverlayIRC} />
+                  </div>
+                </div>
               : null
             }
 

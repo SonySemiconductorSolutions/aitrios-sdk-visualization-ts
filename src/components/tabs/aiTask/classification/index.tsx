@@ -15,17 +15,19 @@
  */
 
 import { List, ListItem, Progress, Textarea, Button } from '@chakra-ui/react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useContext } from 'react'
 import { ClsInferenceProps, ClassficationProps, lavelTextCls, settedLabelText, handleFileInputChangeODorCLS, exportLabelDataODorCLS } from '../../../../hooks/util'
 import styles from './classfication.module.scss'
 import { Stage, Layer, Image, Text } from 'react-konva'
-import { CLASSIFICATION } from '../../../../pages'
+import { CLASSIFICATION } from '../../../../common/constants'
+import { UserContext } from '../../../../hooks/context'
 
 export const ROWDATA_EXPLANATION = 'Inference Result'
 export const LABEL_EXPLANATION = 'Label Setting'
 
 export default function Classification (props: ClassficationProps) {
-  const [labelTextCLS, setLabelTextCLS] = useState<string>(JSON.stringify(props.labelData).replace(/"|\[|\]/g, '').replace(/,/g, '\n'))
+  const { aiTask } = useContext(UserContext)
+  const [labelTextCLS, setLabelTextCLS] = useState<string>(JSON.stringify(props.data.labelData).replace(/"|\[|\]/g, '').replace(/,/g, '\n'))
   const [inferences, setInferences] = useState<ClsInferenceProps[] | undefined>()
   const [rawData, setRawData] = useState<string>()
   const [timeStamp, setTimeStamp] = useState<string>('')
@@ -35,34 +37,34 @@ export default function Classification (props: ClassficationProps) {
   const SCALE = 1
 
   useEffect(() => {
-    props.setLabelData(labelTextCLS.split(/\n/))
+    props.setData((prevState: any) => ({ ...prevState, labelData: labelTextCLS.split(/\n/) }))
   }, [labelTextCLS])
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && props.aiTask === CLASSIFICATION) {
+    if (typeof window !== 'undefined' && aiTask === CLASSIFICATION) {
       const image = new window.Image()
 
-      if (typeof props.image === 'string') {
-        image.src = props.image
+      if (typeof props.data.image === 'string') {
+        image.src = props.data.image
       }
 
       image.onload = () => {
         setState(image)
-        setTimeStamp(props.timestamp)
+        setTimeStamp(props.data.timestamp)
         setCanvasWidth(image.width)
         setCanvasHeight(image.height)
-        setInferences(props.inferences)
-        setRawData(props.inferenceRawData)
-        props.setDisplayCount(props.imageCount)
+        setInferences(props.data.inference)
+        setRawData(props.data.inferenceRawData)
+        props.dispatch({ type: 'updateDisplayCount' })
       }
     }
-  }, [props.image])
+  }, [props.data.image])
 
   return (
     <div className={styles['classfication-container']}>
       <div className={styles['upper-items']}>
         <div className={styles['timestamp-area']}>
-          {props.isDisplayTs === true
+          {props.displaySetting.isDisplayTs === true
             ? <div className={styles['timestamp-area']}>Timestamp:{timeStamp}</div>
             : null
           }
@@ -70,7 +72,7 @@ export default function Classification (props: ClassficationProps) {
       </div>
       <div className={styles['middle-items']}>
         <div style={{ border: '1px solid black', width: canvasWidth, height: canvasHeight }}>
-          {props.image.length !== 0
+          {props.data.image.length !== 0
             ? <Stage width={canvasWidth} height={canvasHeight} scaleX={SCALE} scaleY={SCALE}>
               <Layer>
                 <Image
@@ -78,15 +80,15 @@ export default function Classification (props: ClassficationProps) {
                 />
               </Layer>
               <Layer>
-                {props.isOverlayIR && inferences !== undefined
+                {props.displaySetting.isOverlayIR && inferences !== undefined
                   ? <Text
-                    fill={props.overlayIRC}
+                    fill={props.displaySetting.overlayIRC}
                     fontSize={30}
                     y={100}
                     width={canvasWidth}
                     wrap={'none'}
                     ellipsis={true}
-                    text={lavelTextCls(props.labelData, inferences, props.probability)}
+                    text={lavelTextCls(props.data.labelData, inferences, props.displaySetting.probability)}
                   />
                   : null
                 }
@@ -99,14 +101,14 @@ export default function Classification (props: ClassficationProps) {
         <div className={styles['inference-data-list']}>
           {inferences !== undefined
             ? inferences
-              .filter((cls: ClsInferenceProps) => Math.round(cls.confidence * 1000000) / 10000 >= props.probability)
+              .filter((cls: ClsInferenceProps) => Math.round(cls.confidence * 1000000) / 10000 >= props.displaySetting.probability)
               .sort(function (a, b) { return b.confidence - a.confidence })
-              .slice(0, props.displayScore)
+              .slice(0, props.displaySetting.displayScore)
               .map((jsonItem, index) => {
                 return <List key={index}>
                   <ListItem>
                     <div className={styles['inference-parameter']}>
-                      <div className={styles['inference-parameter-name']}>{` ${settedLabelText(props.labelData, Number(jsonItem.label))} `}</div>
+                      <div className={styles['inference-parameter-name']}>{` ${settedLabelText(props.data.labelData, Number(jsonItem.label))} `}</div>
                       <div className={styles['inference-parameter-percentage']}>{Math.round(jsonItem.confidence * 1000000) / 10000}%</div>
                     </div>
                     {<Progress colorScheme='green' value={jsonItem.confidence * 100} />}
@@ -143,7 +145,7 @@ export default function Classification (props: ClassficationProps) {
               />
             </Button>
             <Button
-              onClick={() => exportLabelDataODorCLS(props)}
+              onClick={() => exportLabelDataODorCLS(props.data.labelData)}
               style={{ color: '#ffffff', backgroundColor: '#2d78be' }}
               variant='solid'
               size='md'

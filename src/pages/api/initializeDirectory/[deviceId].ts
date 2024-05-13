@@ -57,7 +57,7 @@ function deleteDirectory (dirPath: string) {
  * Create Directory by the query parameter.
  *
  * @param req Request
- * deviceId: edge AI device ID
+ * deviceId: Edge Device ID
  * subDirectory: image data's subdirectory name.
  *
  */

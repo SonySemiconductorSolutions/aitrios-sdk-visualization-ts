@@ -16,10 +16,19 @@
 
 import * as getAzureBlob from './getAzureStorage'
 import * as getConsoleStorage from './getConsoleStorage'
+import * as getAwsS3 from './getAwsStorage'
 import * as getLocalStorage from './getLocalStorage'
 import fs from 'fs'
-import { getConsoleAccessLibrarySettings, ConsoleAccessLibrarySettings, getAzureAccessLibrarySettings, AzureAccessLibrarySettings } from '../common/config'
-import { CONNECTION_DESTINATION, LOCAL_ROOT, SERVICE } from '../common/settings'
+import {
+  getConsoleAccessLibrarySettings,
+  ConsoleAccessLibrarySettings,
+  getAzureAccessLibrarySettings,
+  AzureAccessLibrarySettings,
+  getAwsAccessLibrarySettings,
+  AwsAccessLibrarySettings
+} from '../common/config'
+import { CONNECTION_DESTINATION, SERVICE } from '../common/settings'
+
 export type images = {
   name: string,
   contents: string
@@ -29,14 +38,16 @@ export type getImageResult = {
   images: images[]
 }
 const RETRY_COUNT = 5
-export async function getImage (deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number) {
+export async function getImage (deviceId: string, subDirectory: string, orderBy?: string, skip?: number, numberOfImages?: number, fromDatetime?: string, toDatetime?: string) {
   let response
   if (CONNECTION_DESTINATION.toString() === SERVICE.Azure && checkAzureSettings()) {
     response = await getAzureBlob.getImageFromAzure(RETRY_COUNT, deviceId, subDirectory, orderBy, skip, numberOfImages)
-  } else if (CONNECTION_DESTINATION.toString() === SERVICE.Local && checkLocalSettings(LOCAL_ROOT)) {
+  } else if (CONNECTION_DESTINATION.toString() === SERVICE.AWS && checkAwsSettings()) {
+    response = await getAwsS3.getImageFromAws(RETRY_COUNT, deviceId, subDirectory, orderBy, skip, numberOfImages)
+  } else if (CONNECTION_DESTINATION.toString() === SERVICE.Local) {
     response = await getLocalStorage.getImageFromLocal(RETRY_COUNT, deviceId, subDirectory, orderBy, skip, numberOfImages)
   } else if (CONNECTION_DESTINATION.toString() === SERVICE.Console && checkConsoleSettings()) {
-    response = await getConsoleStorage.getImageFromConsole(deviceId, subDirectory, orderBy, skip, numberOfImages)
+    response = await getConsoleStorage.getImageFromConsole(deviceId, subDirectory, orderBy, skip, numberOfImages, fromDatetime, toDatetime)
   }
   return response
 }
@@ -46,7 +57,9 @@ export async function getInference (deviceId: string, subDirectory: string, star
   if (startInferenceTime === undefined && endInferenceTime === undefined) throw new Error(JSON.stringify({ message: 'Call with unexpected arguments' }))
   if (CONNECTION_DESTINATION.toString() === SERVICE.Azure && checkAzureSettings()) {
     response = await getAzureBlob.getInferenceFromAzure(RETRY_COUNT, deviceId, subDirectory, startInferenceTime, endInferenceTime, numberOfInferenceResult)
-  } else if (CONNECTION_DESTINATION.toString() === SERVICE.Local && checkLocalSettings(LOCAL_ROOT)) {
+  } else if (CONNECTION_DESTINATION.toString() === SERVICE.AWS && checkAwsSettings()) {
+    response = await getAwsS3.getInferenceFromAws(RETRY_COUNT, deviceId, subDirectory, startInferenceTime, endInferenceTime, numberOfInferenceResult)
+  } else if (CONNECTION_DESTINATION.toString() === SERVICE.Local) {
     response = await getLocalStorage.getInferenceFromLocal(RETRY_COUNT, deviceId, subDirectory, startInferenceTime, endInferenceTime, numberOfInferenceResult)
   } else if (CONNECTION_DESTINATION.toString() === SERVICE.Console && checkConsoleSettings()) {
     response = await getConsoleStorage.getInferenceFromConsole(deviceId, startInferenceTime, endInferenceTime, numberOfInferenceResult)
@@ -58,7 +71,9 @@ export async function getSubDirectoryList (deviceId: string) {
   let response
   if (CONNECTION_DESTINATION.toString() === SERVICE.Azure && checkAzureSettings()) {
     response = await getAzureBlob.getSubDirectoryListFromAzure(deviceId)
-  } else if (CONNECTION_DESTINATION.toString() === SERVICE.Local && checkLocalSettings(LOCAL_ROOT)) {
+  } else if (CONNECTION_DESTINATION.toString() === SERVICE.AWS && checkAwsSettings()) {
+    response = await getAwsS3.getSubDirectoryListFromAws(deviceId)
+  } else if (CONNECTION_DESTINATION.toString() === SERVICE.Local) {
     response = getLocalStorage.getSubDirectoryListFromLocal(deviceId)
   } else if (CONNECTION_DESTINATION.toString() === SERVICE.Console && checkConsoleSettings()) {
     response = await getConsoleStorage.getSubDirectoryListFromConsole(deviceId)
@@ -71,16 +86,9 @@ function checkAzureSettings () {
     throw new Error(JSON.stringify({ message: 'connection settings file does not exist.' }))
   }
   const connectionInfo: AzureAccessLibrarySettings = getAzureAccessLibrarySettings()
-  if (connectionInfo.azure_access_settings.connection_string === undefined || connectionInfo.azure_access_settings.connection_string === '' ||
-    connectionInfo.azure_access_settings.container_name === undefined || connectionInfo.azure_access_settings.container_name === '') {
+  if (isNullOrUnderfinedOrEmpty(connectionInfo.azure_access_settings.connection_string) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.azure_access_settings.container_name)) {
     throw new Error(JSON.stringify({ message: 'connection settings file is incorrect.' }))
-  }
-  return true
-}
-
-function checkLocalSettings (path: string) {
-  if (path === '') {
-    throw new Error(JSON.stringify({ message: 'LOCAL_ROOT is not set.' }))
   }
   return true
 }
@@ -90,15 +98,29 @@ function checkConsoleSettings () {
     throw new Error(JSON.stringify({ message: 'connection settings file does not exist.' }))
   }
   const connectionInfo: ConsoleAccessLibrarySettings = getConsoleAccessLibrarySettings()
-  if (connectionInfo.console_access_settings.console_endpoint === undefined ||
-    connectionInfo.console_access_settings.console_endpoint === '' ||
-    connectionInfo.console_access_settings.portal_authorization_endpoint === undefined ||
-    connectionInfo.console_access_settings.portal_authorization_endpoint === '' ||
-    connectionInfo.console_access_settings.client_secret === undefined ||
-    connectionInfo.console_access_settings.client_secret === '' ||
-    connectionInfo.console_access_settings.client_id === undefined ||
-    connectionInfo.console_access_settings.client_id === '') {
+  if (isNullOrUnderfinedOrEmpty(connectionInfo.console_access_settings.console_endpoint) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.console_access_settings.portal_authorization_endpoint) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.console_access_settings.client_secret) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.console_access_settings.client_id)) {
     throw new Error(JSON.stringify({ message: 'connection settings file is incorrect.' }))
   }
   return true
+}
+
+function checkAwsSettings () {
+  if (!fs.existsSync('common/aws_access_settings.yaml')) {
+    throw new Error(JSON.stringify({ message: 'connection settings file does not exist.' }))
+  }
+  const connectionInfo: AwsAccessLibrarySettings = getAwsAccessLibrarySettings()
+  if (isNullOrUnderfinedOrEmpty(connectionInfo.aws_access_settings.bucket_name) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.aws_access_settings.access_key_id) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.aws_access_settings.secret_access_key) ||
+    isNullOrUnderfinedOrEmpty(connectionInfo.aws_access_settings.region)) {
+    throw new Error(JSON.stringify({ message: 'connection settings file is incorrect.' }))
+  }
+  return true
+}
+
+function isNullOrUnderfinedOrEmpty (value: string) {
+  return value === undefined || value === null || value === ''
 }
